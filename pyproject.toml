@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "pyobvector"
+version = "0.1.0"
+description = ""
+authors = ["shanhaikang.shk <shanhaikang.shk@oceanbase.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+sqlalchemy = "^2.0.32"
+numpy = "^1.26.0"
+pymysql = "^1.1.1"
+sphinx = "^8.0.2"
+
+[[tool.poetry.source]]
+name = "china"
+url = "https://pypi.antfin-inc.com/simple/"
+priority = "primary"
+
+[[tool.poetry.source]]
+name = "pipy"
+url = "https://pypi.org/simple/"
+priority = "supplemental"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+pylint = "^3.2.7"
+
+[tool.pytest.ini_options]
+log_level = "INFO"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
