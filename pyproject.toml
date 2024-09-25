@@ -13,15 +13,9 @@ pymysql = "^1.1.1"
 sphinx = "^8.0.2"
 
 [[tool.poetry.source]]
-name = "china"
-url = "https://pypi.antfin-inc.com/simple/"
-priority = "primary"
-
-[[tool.poetry.source]]
-name = "pipy"
+name = "pypi"
 url = "https://pypi.org/simple/"
-priority = "supplemental"
-
+priority = "primary"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
