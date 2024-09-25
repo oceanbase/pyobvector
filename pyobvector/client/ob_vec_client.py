@@ -17,7 +17,6 @@ from sqlalchemy import (
     and_,
 )
 from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.mysql.base import ischema_names
 import sqlalchemy.sql.functions as func_mod
 import numpy as np
@@ -29,6 +28,7 @@ from ..schema import (
     l2_distance,
     cosine_distance,
     inner_product,
+    ReplaceStmt,
 )
 from ..util import ObVersion
 from .partitions import *
@@ -360,18 +360,13 @@ class ObVecClient:
 
         with self.engine.connect() as conn:
             with conn.begin():
-                insert_stmt = (
-                    mysql_insert(table).with_hint(f"PARTITION({partition_name})")
+                upsert_stmt = (
+                    ReplaceStmt(table).with_hint(f"PARTITION({partition_name})")
                     if partition_name is not None and partition_name != ""
-                    else mysql_insert(table)
+                    else ReplaceStmt(table)
                 )
-                insert_stmt = insert_stmt.values(data)
-                str_insert_stmt = str(
-                    insert_stmt.compile(compile_kwargs={"literal_binds": True})
-                )
-                assert str_insert_stmt.startswith("INSERT")
-                str_insert_stmt = str_insert_stmt.replace("INSERT", "REPLACE", 1)
-                conn.execute(text(str_insert_stmt))
+                upsert_stmt = upsert_stmt.values(data)
+                conn.execute(upsert_stmt)
 
     def update(
         self,
@@ -384,8 +379,23 @@ class ObVecClient:
 
         Args:
             table_name (string) : table name
-            data (Union[Dict, List[Dict]]) : data that will be updated
-            partition_names (Optional[str]) : limit the query to certain partition
+            values_clause: update values clause
+            where_clause: update with filter
+            partition_name (Optional[str]) : limit the query to certain partition
+
+        Example:
+            .. code-block:: python
+
+            data = [
+                {"id": 112, "embedding": [1, 2, 3], "meta": {'doc':'hhh1'}},
+                {"id": 190, "embedding": [0.13, 0.123, 1.213], "meta": {'doc':'hhh2'}},
+            ]
+            client.insert(collection_name=test_collection_name, data=data)
+            client.update(
+                table_name=test_collection_name, 
+                values_clause=[{'meta':{'doc':'HHH'}}], 
+                where_clause=[text("id=112")]
+            )
         """
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
 

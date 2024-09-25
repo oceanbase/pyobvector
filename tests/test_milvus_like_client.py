@@ -1,6 +1,6 @@
 import unittest
 from pyobvector import *
-from sqlalchemy import Column, Integer, Table, func
+from sqlalchemy import Column, Integer, Table, func, text
 import numpy as np
 import logging
 
@@ -441,7 +441,7 @@ class ObMilkClientTest(unittest.TestCase):
         schema = self.client.create_schema(partitions=range_part)
         schema.add_field(field_name="id", datatype=DataType.INT64, is_primary=True)
         schema.add_field(field_name="embedding", datatype=DataType.FLOAT_VECTOR, dim=3)
-        schema.add_field(field_name="meta", datatype=DataType.INT64)
+        schema.add_field(field_name="meta", datatype=DataType.JSON)
 
         idx_params = self.client.prepare_index_params()
         idx_params.add_index(
@@ -459,14 +459,14 @@ class ObMilkClientTest(unittest.TestCase):
         )
 
         data = [
-            {"id": 112, "embedding": [1, 2, 3], "meta": 12},
-            {"id": 190, "embedding": [0.13, 0.123, 1.213], "meta": 19},
+            {"id": 112, "embedding": [1, 2, 3], "meta": {'doc':'hhh1'}},
+            {"id": 190, "embedding": [0.13, 0.123, 1.213], "meta": {'doc':'hhh2'}},
         ]
         self.client.upsert(collection_name=test_collection_name, data=data)
 
         data = [
-            {"id": 112, "embedding": [0, 0, 0], "meta": -1},
-            {"id": 190, "embedding": [0, 0, 0], "meta": 1},
+            {"id": 112, "embedding": [0, 0, 0], "meta": {'doc':'HHH1'}},
+            {"id": 190, "embedding": [0, 0, 0], "meta": {'doc':'HHH2'}},
         ]
         self.client.upsert(collection_name=test_collection_name, data=data)
 
