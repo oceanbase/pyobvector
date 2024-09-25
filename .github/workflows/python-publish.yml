@@ -22,18 +22,20 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
         python-version: '3.x'
+    
     - name: Install Poetry
       run: |
         pip install poetry
+    
     - name: Install dependencies
       run: |
         poetry install
+    
     - name: Build package
       run: |
         poetry build
-    - name: Publish release distributions to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
