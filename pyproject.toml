@@ -12,11 +12,6 @@ numpy = "^1.26.0"
 pymysql = "^1.1.1"
 sphinx = "^8.0.2"
 
-[[tool.poetry.source]]
-name = "pypi"
-url = "https://pypi.org/simple/"
-priority = "primary"
-
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
 pylint = "^3.2.7"
