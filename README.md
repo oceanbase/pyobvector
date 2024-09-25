@@ -10,7 +10,11 @@ A python SDK for OceanBase Vector Store, based on SQLAlchemy, compatible with Mi
 poetry install
 ```
 
-- PyPI: TODO
+- install with pip:
+
+```shell
+pip install pyobvector==0.1.0
+```
 
 ## Build Doc
 
