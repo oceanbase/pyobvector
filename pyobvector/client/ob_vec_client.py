@@ -587,7 +587,7 @@ class ObVecClient:
         vec_column_name: str,
         distance_func,
         topk: int = 10,
-        output_column_name: Optional[List[str]] = None,
+        output_column_names: Optional[List[str]] = None,
         where_clause=None,
     ):
         """perform precise vector search.
@@ -598,13 +598,13 @@ class ObVecClient:
             vec_column_name (string) : which vector field to search
             distance_func : function to calculate distance between vectors
             topk (int) : top K
-            output_column_name (Optional[List[str]]) : output fields
+            output_column_names (Optional[List[str]]) : output column names
             where_clause : do ann search with filter
         """
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
 
-        if output_column_name is not None:
-            columns = [table.c[column_name] for column_name in output_column_name]
+        if output_column_names is not None:
+            columns = [table.c[column_name] for column_name in output_column_names]
             stmt = (
                 select(*columns)
                 .order_by(distance_func(table.c[vec_column_name], str(vec_data)))

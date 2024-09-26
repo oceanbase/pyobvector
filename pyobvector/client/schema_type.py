@@ -8,7 +8,6 @@ from sqlalchemy import (
     String,
     Float,
     Double,
-    ARRAY,
     JSON,
 )
 from .enum import IntEnum
@@ -61,8 +60,8 @@ def convert_datatype_to_sqltype(datatype: DataType):
         return Text
     if datatype == DataType.VARCHAR:
         return String
-    if datatype == DataType.ARRAY:
-        return ARRAY
+    # if datatype == DataType.ARRAY:
+    #     return ARRAY
     if datatype == DataType.JSON:
         return JSON
     if datatype == DataType.FLOAT_VECTOR:
