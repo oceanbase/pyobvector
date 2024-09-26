@@ -60,10 +60,21 @@ class ObVecClientTest(unittest.TestCase):
             distance_func=func.l2_distance,
             with_dist=True,
             topk=5,
-            output_column_name=["id"],
+            output_column_names=["id"],
         )
-
         self.assertEqual(set(res.fetchall()), set([(112,0.0), (111,0.0), (10,0.0), (11,0.0), (12,0.0)]))
+
+        res = self.client.ann_search(
+            test_collection_name,
+            vec_data=[0, 0, 0],
+            vec_column_name="embedding",
+            distance_func=func.l2_distance,
+            with_dist=True,
+            topk=5,
+            output_column_names=["id"],
+            partition_names=["p0"],
+        )
+        self.assertEqual(set([r[0] for r in res.fetchall()]), set([12, 11, 10, 5, 7]))
 
     def test_delete_get(self):
         test_collection_name = "ob_delete_get_test"

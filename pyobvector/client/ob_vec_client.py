@@ -266,11 +266,11 @@ class ObVecClient:
         trigger_threshold: int = 10000,
     ):
         """Refresh vector index for performance.
-        
+
         Args:
         :param table_name (string) : table name
         :param index_name (string) : vector index name
-        :param trigger_threshold (int) : 
+        :param trigger_threshold (int) :
                 If delta_buffer_table row count is greater than `trigger_threshold`,
                 refreshing is actually triggered.
         """
@@ -278,7 +278,7 @@ class ObVecClient:
             with conn.begin():
                 conn.execute(
                     text(
-                        f"CALL DBMS_VECTOR.REFRESH_INDEX('{index_name}', " \
+                        f"CALL DBMS_VECTOR.REFRESH_INDEX('{index_name}', "
                         f"'{table_name}', '', {trigger_threshold})"
                     )
                 )
@@ -290,7 +290,7 @@ class ObVecClient:
         trigger_threshold: float = 0.2,
     ):
         """Rebuild vector index for performance.
-        
+
         Args:
         :param table_name (string) : table name
         :param index_name (string) : vector index name
@@ -300,7 +300,7 @@ class ObVecClient:
             with conn.begin():
                 conn.execute(
                     text(
-                        f"CALL DBMS_VECTOR.REBUILD_INDEX('{index_name}', " \
+                        f"CALL DBMS_VECTOR.REBUILD_INDEX('{index_name}', "
                         f"'{table_name}', '', {trigger_threshold})"
                     )
                 )
@@ -392,8 +392,8 @@ class ObVecClient:
             ]
             client.insert(collection_name=test_collection_name, data=data)
             client.update(
-                table_name=test_collection_name, 
-                values_clause=[{'meta':{'doc':'HHH'}}], 
+                table_name=test_collection_name,
+                values_clause=[{'meta':{'doc':'HHH'}}],
                 where_clause=[text("id=112")]
             )
         """
@@ -526,8 +526,9 @@ class ObVecClient:
         distance_func,
         with_dist: bool = False,
         topk: int = 10,
-        output_column_name: Optional[List[str]] = None,
+        output_column_names: Optional[List[str]] = None,
         where_clause=None,
+        partition_names: Optional[List[str]] = None,
     ):
         """perform ann search.
 
@@ -538,13 +539,13 @@ class ObVecClient:
             distance_func : function to calculate distance between vectors
             with_dist (bool) : return result with distance
             topk (int) : top K
-            output_column_name (Optional[List[str]]) : output fields
+            output_column_names (Optional[List[str]]) : output fields
             where_clause : do ann search with filter
         """
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
 
-        if output_column_name is not None:
-            columns = [table.c[column_name] for column_name in output_column_name]
+        if output_column_names is not None:
+            columns = [table.c[column_name] for column_name in output_column_names]
         else:
             columns = [table.c[column.name] for column in table.columns]
 
@@ -572,6 +573,11 @@ class ObVecClient:
         )
         with self.engine.connect() as conn:
             with conn.begin():
+                if partition_names is None:
+                    return conn.execute(text(stmt_str))
+                stmt_str = self._insert_partition_hint_for_query_sql(
+                    stmt_str, f"PARTITION({', '.join(partition_names)})"
+                )
                 return conn.execute(text(stmt_str))
 
     def precise_search(

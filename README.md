@@ -34,7 +34,7 @@ make html
 
 ### Milvus compatible mode
 
-Refer to `tests/test_ob_milk_client.py` for more examples.
+Refer to `tests/test_milvus_like_client.py` for more examples.
 
 A simple workflow to perform ANN search with OceanBase Vector Store:
 
@@ -158,7 +158,7 @@ res = self.client.ann_search(
     vec_column_name='embedding',
     distance_func=func.l2_distance,
     topk=5,
-    output_column_name=['id']
+    output_column_names=['id']
 )
 # For example, the result will be:
 # [(112,), (111,), (10,), (11,), (12,)]
