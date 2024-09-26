@@ -45,7 +45,7 @@ def convert_datatype_to_sqltype(datatype: DataType):
     Args:
         datatype (DataType) : Milvus data type.
     """
-    if datatype in (DataType.BOOL, datatype == DataType.INT8):
+    if datatype in (DataType.BOOL, DataType.INT8):
         return Boolean
     if datatype == DataType.INT16:
         return SmallInteger
