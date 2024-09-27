@@ -315,6 +315,8 @@ class MilvusLikeClient(Client):
             return func.cosine_distance
         if metric_type == "ip":
             return func.inner_product
+        if metric_type == "neg_ip":
+            return func.negative_inner_product
         raise VectorMetricTypeException(
             code=ErrorCode.INVALID_ARGUMENT,
             message=ExceptionsMessage.MetricTypeValueInvalid,
@@ -360,7 +362,8 @@ class MilvusLikeClient(Client):
         :param flter : do ann search with filter
         :param limit (int) : top K
         :param output_fields (Optional[List[str]]) : output fields
-        :param search_params (Optional[dict]) : Only `metric_type` with value `l2` supported
+        :param search_params (Optional[dict]) :
+            Only `metric_type` with value `l2`/`neg_ip` supported
         :param timeout : not used in OceanBase
         :param partition_names (List[str]) : limit the query to certain partitions
         :return : A list of records, each record is a dict 
@@ -376,8 +379,8 @@ class MilvusLikeClient(Client):
                     )
                 lower_metric_type_str = search_params["metric_type"].lower()
                 if lower_metric_type_str not in (
-                    "l2"
-                ):  # For OceanBase, only support l2 distance in ann_search
+                    "l2", "neg_ip"
+                ):  # For OceanBase, only support l2/ip distance in ann_search
                     raise VectorMetricTypeException(
                         code=ErrorCode.INVALID_ARGUMENT,
                         message=ExceptionsMessage.MetricTypeValueInvalid,

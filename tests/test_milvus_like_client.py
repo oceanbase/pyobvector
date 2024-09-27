@@ -425,6 +425,57 @@ class ObMilkClientTest(unittest.TestCase):
             with_dist=True,
         )
         self.assertEqual(set([111, 112]), set([r["id"] for r in res]))
+    
+    def test_ann_search_inner_product(self):
+        test_collection_name = "ann_test_ip"
+        self.client.drop_collection(test_collection_name)
+
+        range_part = ObRangePartition(
+            False,
+            range_part_infos=[
+                RangeListPartInfo("p0", 100),
+                RangeListPartInfo("p1", "maxvalue"),
+            ],
+            range_expr="id",
+        )
+        schema = self.client.create_schema(partitions=range_part)
+        schema.add_field(field_name="id", datatype=DataType.INT64, is_primary=True)
+        schema.add_field(field_name="embedding", datatype=DataType.FLOAT_VECTOR, dim=3)
+        schema.add_field(field_name="meta", datatype=DataType.JSON, nullable=True)
+
+        idx_params = self.client.prepare_index_params()
+        idx_params.add_index(
+            field_name="embedding",
+            index_type=VecIndexType.HNSW,
+            index_name="vidx",
+            metric_type="inner_product",
+            params={"M": 16, "efConstruction": 256},
+        )
+
+        self.client.create_collection(
+            collection_name=test_collection_name,
+            schema=schema,
+            index_params=idx_params,
+        )
+
+        vector_value1 = [0.748479, 0.276979, 0.555195]
+        vector_value2 = [0, 0, 0]
+        data1 = [{"id": i, "embedding": vector_value1} for i in range(10)]
+        data1.extend([{"id": i, "embedding": vector_value2} for i in range(10, 13)])
+        data1.extend([{"id": i, "embedding": vector_value2} for i in range(111, 113)])
+        self.client.insert(collection_name=test_collection_name, data=data1)
+
+        res = self.client.search(
+            collection_name=test_collection_name,
+            data=[0, 0, 0],
+            anns_field="embedding",
+            limit=5,
+            output_fields=["id"],
+            search_params={"metric_type": "neg_ip"}
+        )
+        self.assertEqual(
+            set([r['id'] for r in res]), set([0, 111, 5, 112, 6])
+        )
 
     def test_upsert_data(self):
         test_collection_name = "upsert_test"

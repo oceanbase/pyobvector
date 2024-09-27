@@ -28,6 +28,7 @@ from ..schema import (
     l2_distance,
     cosine_distance,
     inner_product,
+    negative_inner_product,
     ReplaceStmt,
 )
 from ..util import ObVersion
@@ -53,6 +54,7 @@ class ObVecClient:
         setattr(func_mod, "l2_distance", l2_distance)
         setattr(func_mod, "cosine_distance", cosine_distance)
         setattr(func_mod, "inner_product", inner_product)
+        setattr(func_mod, "negative_inner_product", negative_inner_product)
 
         connection_str = (
             f"mysql+pymysql://{user}:{password}@{uri}/{db_name}?charset=utf8mb4"

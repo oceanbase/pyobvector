@@ -68,3 +68,22 @@ def compile_inner_product(element, compiler, **kwargs): # pylint: disable=unused
     """
     args = ", ".join(compiler.process(arg) for arg in element.clauses)
     return f"inner_product({args})"
+
+class negative_inner_product(FunctionElement):
+    """Vector distance function: negative_inner_product.
+    
+    Attributes:
+    type : result type
+    """
+    type = Float()
+
+@compiles(negative_inner_product)
+def compile_negative_inner_product(element, compiler, **kwargs): # pylint: disable=unused-argument
+    """Compile negative_inner_product function.
+
+    Args:
+        element: negative_inner_product arguments
+        compiler: SQL compiler
+    """
+    args = ", ".join(compiler.process(arg) for arg in element.clauses)
+    return f"negative_inner_product({args})"

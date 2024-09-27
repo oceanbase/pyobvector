@@ -108,7 +108,7 @@ class ExceptionsMessage:
     )
     CollectionNotExists = "Collection does not exist."
     MetricTypeParamTypeInvalid = "MetricType param type should be string."
-    MetricTypeValueInvalid = "MetricType should be 'l2' in ann search."
+    MetricTypeValueInvalid = "MetricType should be 'l2'/'ip' in ann search."
     UsingInIDsWhenMultiPrimaryKey = "Using 'ids' when table has multi primary key."
     ClusterVersionIsLow = (
         "OceanBase Vector Store is not supported because cluster version is below 4.3.3.0."
