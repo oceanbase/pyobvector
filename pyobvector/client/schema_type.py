@@ -4,12 +4,12 @@ from sqlalchemy import (
     SmallInteger,
     Integer,
     BigInteger,
-    Text,
     String,
     Float,
     Double,
     JSON,
 )
+from sqlalchemy.dialects.mysql import LONGTEXT
 from .enum import IntEnum
 from ..schema import VECTOR
 
@@ -57,7 +57,7 @@ def convert_datatype_to_sqltype(datatype: DataType):
     if datatype == DataType.DOUBLE:
         return Double
     if datatype == DataType.STRING:
-        return Text
+        return LONGTEXT
     if datatype == DataType.VARCHAR:
         return String
     # if datatype == DataType.ARRAY:
