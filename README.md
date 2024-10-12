@@ -13,7 +13,7 @@ poetry install
 - install with pip:
 
 ```shell
-pip install pyobvector==0.1.4
+pip install pyobvector==0.1.5
 ```
 
 ## Build Doc
@@ -124,7 +124,7 @@ cols = [
     Column('embedding', VECTOR(3)),
     Column('meta', JSON)
 ]
-client.create_table(test_collection_name, columns=cols, paritions=range_part)
+client.create_table(test_collection_name, columns=cols, partitions=range_part)
 
 # create vector index
 client.create_index(

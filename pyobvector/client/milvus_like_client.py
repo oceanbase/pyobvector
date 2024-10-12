@@ -145,7 +145,7 @@ class MilvusLikeClient(Client):
                 columns=columns,
                 indexes=None,
                 vidxs=index_params,
-                paritions=schema.partitions,
+                partitions=schema.partitions,
             )
 
     def get_collection_stats(

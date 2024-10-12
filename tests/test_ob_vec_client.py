@@ -32,7 +32,7 @@ class ObVecClientTest(unittest.TestCase):
             Column("meta", JSON),
         ]
         self.client.create_table(
-            test_collection_name, columns=cols, paritions=range_part
+            test_collection_name, columns=cols, partitions=range_part
         )
 
         # create vector index

@@ -100,7 +100,7 @@ class ObVecClient:
         table_name: str,
         columns: List[Column],
         indexes: Optional[List[Index]] = None,
-        paritions: Optional[ObPartition] = None,
+        partitions: Optional[ObPartition] = None,
     ):
         """Create a table.
 
@@ -108,7 +108,7 @@ class ObVecClient:
             table_name (string) : table name
             columns (List[Column]) : column schema
             indexes (Optional[List[Index]]) : optional index schema
-            paritions (Optional[ObPartition]) : optional partition strategy
+            partitions (Optional[ObPartition]) : optional partition strategy
         """
         with self.engine.connect() as conn:
             with conn.begin():
@@ -129,9 +129,9 @@ class ObVecClient:
                     )
                 table.create(self.engine, checkfirst=True)
                 # do partition
-                if paritions is not None:
+                if partitions is not None:
                     conn.execute(
-                        text(f"ALTER TABLE `{table_name}` {paritions.do_compile()}")
+                        text(f"ALTER TABLE `{table_name}` {partitions.do_compile()}")
                     )
 
     @classmethod
@@ -145,7 +145,7 @@ class ObVecClient:
         columns: List[Column],
         indexes: Optional[List[Index]] = None,
         vidxs: Optional[IndexParams] = None,
-        paritions: Optional[ObPartition] = None,
+        partitions: Optional[ObPartition] = None,
     ):
         """Create table with optional index_params.
 
@@ -154,7 +154,7 @@ class ObVecClient:
             columns (List[Column]) : column schema
             indexes (Optional[List[Index]]) : optional common index schema
             vids (Optional[IndexParams]) : optional vector index schema
-            paritions (Optional[ObPartition]) : optional partition strategy
+            partitions (Optional[ObPartition]) : optional partition strategy
         """
         with self.engine.connect() as conn:
             with conn.begin():
@@ -176,9 +176,9 @@ class ObVecClient:
                     )
                 table.create(self.engine, checkfirst=True)
                 # do partition
-                if paritions is not None:
+                if partitions is not None:
                     conn.execute(
-                        text(f"ALTER TABLE `{table_name}` {paritions.do_compile()}")
+                        text(f"ALTER TABLE `{table_name}` {partitions.do_compile()}")
                     )
                 # create vector indexes
                 if vidxs is not None:
