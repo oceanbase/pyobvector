@@ -1,6 +1,6 @@
 import unittest
 from pyobvector import *
-from sqlalchemy import Column, Integer, JSON, String
+from sqlalchemy import Column, Integer, JSON, String, text
 from sqlalchemy import func
 import logging
 
@@ -100,16 +100,21 @@ class ObVecClientTest(unittest.TestCase):
 
         # insert data
         data = [
-            {"id":"abc", "embedding":[0.748479, 0.276979, 0.555195]},
-            {"id":"bcd", "embedding":[0.748479, 0.276979, 0.555195]},
-            {"id":"cde", "embedding":[0, 0, 0]},
-            {"id":"def", "embedding":[1, 2, 3]},
+            {"id":"abc", "embedding":[0.748479, 0.276979, 0.555195], "meta": {"page": 1}},
+            {"id":"bcd", "embedding":[0.748479, 0.276979, 0.555195], "meta": {"page": 2}},
+            {"id":"cde", "embedding":[0, 0, 0], "meta": {"page": 3}},
+            {"id":"def", "embedding":[1, 2, 3], "meta": {"page": 4}},
         ]
         self.client.insert(test_collection_name, data=data)
 
         self.client.delete(test_collection_name, ids=["bcd", "def"])
-        res = self.client.get(test_collection_name, ids=["abc", "bcd", "cde", "def"], output_column_name=['id'])
-        self.assertEqual(set(res.fetchall()), set([("abc",), ("cde",)]))
+        res = self.client.get(
+            test_collection_name,
+            ids=["abc", "bcd", "cde", "def"],
+            where_clause=[text("meta->'$.page' > 1")],
+            output_column_name=['id']
+        )
+        self.assertEqual(set(res.fetchall()), set([('cde',)]))
 
     def test_set_variable(self):
         self.client.set_ob_hnsw_ef_search(100)

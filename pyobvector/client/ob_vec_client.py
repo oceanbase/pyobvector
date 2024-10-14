@@ -465,6 +465,7 @@ class ObVecClient:
         self,
         table_name: str,
         ids: Optional[Union[list, str, int]],
+        where_clause = None,
         output_column_name: Optional[List[str]] = None,
         partition_names: Optional[List[str]] = None,
     ):
@@ -473,6 +474,7 @@ class ObVecClient:
         Args:
         :param table_name (string) : table name
         :param ids : specified primary field values
+        :param where_clause : SQL filter
         :param output_column_name (Optional[List[str]]) : output fields name
         :param partition_names (List[str]) : limit the query to certain partitions
         """
@@ -485,15 +487,21 @@ class ObVecClient:
         primary_keys = table.primary_key
         pkey_names = [column.name for column in primary_keys]
         where_in_clause = None
-        if len(pkey_names) == 1:
+        if ids is not None and len(pkey_names) == 1:
             if isinstance(ids, list):
                 where_in_clause = table.c[pkey_names[0]].in_(ids)
             elif isinstance(ids, (str, int)):
                 where_in_clause = table.c[pkey_names[0]].in_([ids])
             else:
                 raise TypeError("'ids' is not a list/str/int")
-        if where_in_clause is not None:
+
+        if where_in_clause is not None and where_clause is None:
             stmt = stmt.where(where_in_clause)
+        elif where_in_clause is None and where_clause is not None:
+            stmt = stmt.where(*where_clause)
+        elif where_in_clause is not None and where_clause is not None:
+            stmt = stmt.where(and_(where_in_clause, *where_clause))
+
         with self.engine.connect() as conn:
             with conn.begin():
                 if partition_names is None:
