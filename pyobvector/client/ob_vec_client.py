@@ -17,7 +17,7 @@ from sqlalchemy import (
     and_,
 )
 from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy.dialects.mysql.base import ischema_names
+from sqlalchemy.dialects import registry
 import sqlalchemy.sql.functions as func_mod
 import numpy as np
 from .index_param import IndexParams, IndexParam
@@ -50,14 +50,16 @@ class ObVecClient:
         db_name: str = "test",
         **kwargs,
     ):
-        ischema_names["VECTOR"] = VECTOR
+        registry.register("mysql.oceanbase", "pyobvector.schema.dialect", "OceanBaseDialect")
+
+        # ischema_names["VECTOR"] = VECTOR
         setattr(func_mod, "l2_distance", l2_distance)
         setattr(func_mod, "cosine_distance", cosine_distance)
         setattr(func_mod, "inner_product", inner_product)
         setattr(func_mod, "negative_inner_product", negative_inner_product)
 
         connection_str = (
-            f"mysql+pymysql://{user}:{password}@{uri}/{db_name}?charset=utf8mb4"
+            f"mysql+oceanbase://{user}:{password}@{uri}/{db_name}?charset=utf8mb4"
         )
         self.engine = create_engine(connection_str, **kwargs)
         self.metadata_obj = MetaData()
