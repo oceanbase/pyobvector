@@ -22,7 +22,6 @@ import sqlalchemy.sql.functions as func_mod
 import numpy as np
 from .index_param import IndexParams, IndexParam
 from ..schema import (
-    VECTOR,
     ObTable,
     VectorIndex,
     l2_distance,

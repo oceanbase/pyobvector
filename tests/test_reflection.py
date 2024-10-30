@@ -19,3 +19,17 @@ class ObReflectionTest(unittest.TestCase):
 ) DEFAULT CHARSET = utf8mb4 ROW_FORMAT = DYNAMIC COMPRESSION = 'zstd_1.3.8' REPLICA_NUM = 1 BLOCK_SIZE = 16384 USE_BLOOM_FILTER = FALSE TABLET_SIZE = 134217728 PCTFREE = 0
 """
         dialect._tabledef_parser.parse(ddl, "utf8")
+
+    def test_dialect(self):
+        from sqlalchemy.dialects import registry
+        from sqlalchemy.ext.asyncio import create_async_engine
+
+        uri: str = "127.0.0.1:2881"
+        user: str = "root@test"
+        password: str = ""
+        db_name: str = "test"
+        registry.register("mysql.aoceanbase", "pyobvector", "AsyncOceanBaseDialect")
+        connection_str = (
+            f"mysql+aoceanbase://{user}:{password}@{uri}/{db_name}?charset=utf8mb4"
+        )
+        self.engine = create_async_engine(connection_str)
