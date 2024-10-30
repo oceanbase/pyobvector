@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyobvector"
-version = "0.1.6"
+version = "0.1.7"
 description = "A python SDK for OceanBase Vector Store, based on SQLAlchemy, compatible with Milvus API."
 authors = ["shanhaikang.shk <shanhaikang.shk@oceanbase.com>"]
 readme = "README.md"
