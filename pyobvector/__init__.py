@@ -32,7 +32,7 @@ In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 * ObSubKeyPartition     Specify Key subpartition info
 """
 from .client import *
-from .schema import VECTOR, VectorIndex
+from .schema import VECTOR, VectorIndex, OceanBaseDialect, AsyncOceanBaseDialect
 
 __all__ = [
     "ObVecClient",
@@ -43,6 +43,8 @@ __all__ = [
     "DataType",
     "VECTOR",
     "VectorIndex",
+    "OceanBaseDialect",
+    "AsyncOceanBaseDialect",
     "FieldSchema",
     "CollectionSchema",
     "PartType",

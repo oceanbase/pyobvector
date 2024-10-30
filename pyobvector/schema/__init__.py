@@ -16,6 +16,7 @@ from .vector_index import VectorIndex, CreateVectorIndex
 from .ob_table import ObTable
 from .vec_dist_func import l2_distance, cosine_distance, inner_product, negative_inner_product
 from .replace_stmt import ReplaceStmt
+from .dialect import OceanBaseDialect, AsyncOceanBaseDialect
 
 __all__ = [
     "VECTOR",
@@ -27,4 +28,6 @@ __all__ = [
     "inner_product",
     "negative_inner_product",
     "ReplaceStmt",
+    "OceanBaseDialect",
+    "AsyncOceanBaseDialect",
 ]

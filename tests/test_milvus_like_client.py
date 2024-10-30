@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, Table, func, text
 import numpy as np
 import logging
 
+logger = logging.getLogger(__name__)
 
 class ObMilkClientTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -458,8 +459,8 @@ class ObMilkClientTest(unittest.TestCase):
             index_params=idx_params,
         )
 
-        vector_value1 = [0.748479, 0.276979, 0.555195]
-        vector_value2 = [0, 0, 0]
+        vector_value1 = [1, 0, 0]
+        vector_value2 = [0, 0, 1]
         data1 = [{"id": i, "embedding": vector_value1} for i in range(10)]
         data1.extend([{"id": i, "embedding": vector_value2} for i in range(10, 13)])
         data1.extend([{"id": i, "embedding": vector_value2} for i in range(111, 113)])
@@ -467,14 +468,14 @@ class ObMilkClientTest(unittest.TestCase):
 
         res = self.client.search(
             collection_name=test_collection_name,
-            data=[0, 0, 0],
+            data=[0, 0, 1],
             anns_field="embedding",
             limit=5,
             output_fields=["id"],
             search_params={"metric_type": "neg_ip"}
         )
         self.assertEqual(
-            set([r['id'] for r in res]), set([0, 111, 5, 112, 6])
+            set([r['id'] for r in res]), set([12, 111, 11, 112, 10])
         )
 
     def test_upsert_data(self):
