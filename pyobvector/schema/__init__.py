@@ -12,14 +12,17 @@
 * ReplaceStmt       Replace into statement based on the extension of SQLAlchemy.Insert
 """
 from .vector import VECTOR
+from .geo_srid_point import POINT
 from .vector_index import VectorIndex, CreateVectorIndex
 from .ob_table import ObTable
 from .vec_dist_func import l2_distance, cosine_distance, inner_product, negative_inner_product
+from .gis_func import ST_GeomFromText
 from .replace_stmt import ReplaceStmt
 from .dialect import OceanBaseDialect, AsyncOceanBaseDialect
 
 __all__ = [
     "VECTOR",
+    "POINT",
     "VectorIndex",
     "CreateVectorIndex",
     "ObTable",
@@ -27,6 +30,7 @@ __all__ = [
     "cosine_distance",
     "inner_product",
     "negative_inner_product",
+    "ST_GeomFromText",
     "ReplaceStmt",
     "OceanBaseDialect",
     "AsyncOceanBaseDialect",
