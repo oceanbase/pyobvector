@@ -39,12 +39,34 @@ jobs:
       run: |
         poetry install
 
-    - name: Wait for the Docker container to boot up
-      run: |
-        echo "Waiting for the OceanBase container to be ready..."
-        until docker logs ob433 | grep -q "boot success!"; do
-          sleep 5
-        done
+    - name: Run Docker container
+        run: |
+          docker run --name ob433 -e MODE=slim -p 2881:2881 -d quay.io/oceanbase/oceanbase-ce:4.3.3.0-100000142024101215
+
+    - name: Wait for container to be ready
+        run: |
+          timeout=300
+          while [ $timeout -gt 0 ]; do
+            if docker logs ob433 | grep -q 'boot success!'; then
+              echo "Container is ready."
+              break
+            fi
+            sleep 5
+            timeout=$((timeout - 5))
+          done
+          if [ $timeout -le 0 ]; then
+            echo "Container did not start in time!"
+            exit 1
+          fi
+
+    - name: Execute Initialize SQL Command
+        env:
+          OCEANBASE_HOST: 'localhost'
+          OCEANBASE_PORT: '2881'
+          OCEANBASE_USER: 'root@test'
+          OCEANBASE_PASS: ''
+        run: |
+          docker exec ob433 obclient -h $OCEANBASE_HOST -P $OCEANBASE_PORT -u $OCEANBASE_USER -p$OCEANBASE_PASS -e "ALTER SYSTEM ob_vector_memory_limit_percentage = 30"
 
     - name: Run tests
       run: |
