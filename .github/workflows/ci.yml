@@ -51,7 +51,7 @@ jobs:
 
     - name: Execute Initialize SQL Command
       env:
-        OCEANBASE_HOST: 'localhost'
+        OCEANBASE_HOST: '127.0.0.1'
         OCEANBASE_PORT: '2881'
         OCEANBASE_USER: 'root@test'
         OCEANBASE_PASS: ''
