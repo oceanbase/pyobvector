@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      oceanbase:
+        image: quay.io/oceanbase/oceanbase-ce:4.3.3.0-100000142024101215
+        env:
+          MODE: slim
+        ports:
+          - 2881:2881
+        options: >-
+          --name ob433
+          --health-cmd="echo 'select 1' | nc localhost 2881"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.x'
+        
+    - name: Install Poetry
+      run: |
+        pip install poetry
+        
+    - name: Install dependencies
+      run: |
+        poetry install
+
+    - name: Wait for the Docker container to boot up
+      run: |
+        echo "Waiting for the OceanBase container to be ready..."
+        until docker logs ob433 | grep -q "boot success!"; do
+          sleep 5
+        done
+
+    - name: Run tests
+      run: |
+        poetry run pytest --log-cli-level=INFO
