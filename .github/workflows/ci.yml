@@ -11,16 +11,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    services:
-      oceanbase:
-        image: quay.io/oceanbase/oceanbase-ce:4.3.3.0-100000142024101215
-        env:
-          MODE: slim
-        ports:
-          - 2881:2881
-        options: >-
-          --name ob433
 
     steps:
     - name: Check out code
