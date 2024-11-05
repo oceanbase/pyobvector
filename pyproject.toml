@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyobvector"
-version = "0.1.7"
+version = "0.1.8"
 description = "A python SDK for OceanBase Vector Store, based on SQLAlchemy, compatible with Milvus API."
 authors = ["shanhaikang.shk <shanhaikang.shk@oceanbase.com>"]
 readme = "README.md"
@@ -11,7 +11,6 @@ numpy = ">=1.26.0,<2.0.0"
 sqlalchemy = "^2.0.32"
 pymysql = "^1.1.1"
 aiomysql = "^0.2.0"
-geoalchemy2 = "^0.15.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
