@@ -1,6 +1,7 @@
 """gis_func: An extended system function in GIS."""
 
 import logging
+from typing import Tuple
 
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import FunctionElement
@@ -28,6 +29,15 @@ def compile_ST_GeomFromText(element, compiler, **kwargs): # pylint: disable=unus
     args = []
     for idx, arg in enumerate(element.args):
         if idx == 0:
+            if (
+                (not isinstance(arg, Tuple)) or
+                (len(arg) != 2) or
+                (not all(isinstance(x, float) for x in arg))
+            ):
+                raise ValueError(
+                    f"Tuple[float, float] is expected for Point literal," \
+                    f"while get {type(arg)}"
+                )
             args.append(f"'{POINT.to_db(arg)}'")
         else:
             args.append(str(arg))
