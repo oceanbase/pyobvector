@@ -2,8 +2,7 @@
 # from geoalchemy2.shape import from_shape
 import unittest
 from pyobvector import *
-from sqlalchemy import Column, Integer, Index, JSON, String, text
-from sqlalchemy import func
+from sqlalchemy import Column, Integer, Index, String, Table, select
 import logging
 
 logger = logging.getLogger(__name__)
@@ -34,8 +33,31 @@ class ObVecGeoTest(unittest.TestCase):
         )
 
         data = [
-            {"name": "A", "geo": func.ST_GeomFromText(POINT.to_db((39.9289, 116.3883)), 4326)},
-            {"name": "B", "geo": func.ST_GeomFromText(POINT.to_db((39.9145, 116.4002)), 4326)},
-            {"name": "C", "geo": func.ST_GeomFromText(POINT.to_db((39.9040, 116.4053)), 4326)},
+            {"name": "A", "geo": ST_GeomFromText((39.9289, 116.3883), 4326)},
+            {"name": "B", "geo": ST_GeomFromText((39.9145, 116.4002), 4326)},
+            {"name": "C", "geo": ST_GeomFromText((39.9040, 116.4053), 4326)},
         ]
         self.client.insert(test_collection_name, data=data)
+
+        table = Table(
+            test_collection_name,
+            self.client.metadata_obj,
+            autoload_with=self.client.engine
+        )
+        select_cols = [
+            table.c["name"],
+            st_distance(
+                table.c["geo"], 
+                ST_GeomFromText((39.9289, 116.3883), 4326)
+            )
+        ]
+
+        where_clause = [
+            st_dwithin(table.c["geo"], ST_GeomFromText((39.9289, 116.3883), 4326), 3000)
+        ]
+        stmt = select(*select_cols).where(*where_clause)
+        with self.client.engine.connect() as conn:
+            with conn.begin():
+                res = conn.execute(stmt)
+        
+        self.assertEqual(res.fetchall(), [('A', 0.0), ('B', 1895.1085589748836)])

@@ -29,6 +29,9 @@ from ..schema import (
     inner_product,
     negative_inner_product,
     ST_GeomFromText,
+    st_distance,
+    st_dwithin,
+    st_astext,
     ReplaceStmt,
 )
 from ..util import ObVersion
@@ -58,6 +61,9 @@ class ObVecClient:
         setattr(func_mod, "inner_product", inner_product)
         setattr(func_mod, "negative_inner_product", negative_inner_product)
         setattr(func_mod, "ST_GeomFromText", ST_GeomFromText)
+        setattr(func_mod, "st_distance", st_distance)
+        setattr(func_mod, "st_dwithin", st_dwithin)
+        setattr(func_mod, "st_astext", st_astext)
 
         connection_str = (
             f"mysql+oceanbase://{user}:{password}@{uri}/{db_name}?charset=utf8mb4"

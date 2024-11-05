@@ -30,9 +30,23 @@ In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 * ObSubHashPartition    Specify Hash subpartition info
 * ObKeyPartition        Specify Key partition info
 * ObSubKeyPartition     Specify Key subpartition info
+* ST_GeomFromText       GIS function: parse text to geometry object
+* st_distance           GIS function: calculate distance between Points
+* st_dwithin            GIS function: check if the distance between two points
+* st_astext             GIS function: return a Point in human-readable format
 """
 from .client import *
-from .schema import VECTOR, POINT, VectorIndex, OceanBaseDialect, AsyncOceanBaseDialect
+from .schema import (
+    VECTOR,
+    POINT,
+    VectorIndex,
+    OceanBaseDialect,
+    AsyncOceanBaseDialect,
+    ST_GeomFromText,
+    st_distance,
+    st_dwithin,
+    st_astext,
+)
 
 __all__ = [
     "ObVecClient",
@@ -59,4 +73,8 @@ __all__ = [
     "ObSubHashPartition",
     "ObKeyPartition",
     "ObSubKeyPartition",
+    "ST_GeomFromText",
+    "st_distance",
+    "st_dwithin",
+    "st_astext",
 ]
