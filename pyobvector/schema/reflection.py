@@ -1,3 +1,4 @@
+"""OceanBase table definition reflection."""
 import re
 import logging
 from sqlalchemy.dialects.mysql.reflection import MySQLTableDefinitionParser, _re_compile
@@ -5,6 +6,7 @@ from sqlalchemy.dialects.mysql.reflection import MySQLTableDefinitionParser, _re
 logger = logging.getLogger(__name__)
 
 class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
+    """OceanBase table definition parser."""
     def __init__(self, dialect, preparer, *, default_schema=None):
         MySQLTableDefinitionParser.__init__(self, dialect, preparer)
         self.default_schema = default_schema
@@ -32,7 +34,7 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
 
         self._re_key = _re_compile(
             r"  "
-            r"(?:(VECTOR|(?P<type>\S+)) )?KEY"
+            r"(?:(SPATIAL|VECTOR|(?P<type>\S+)) )?KEY"
             # r"(?:(?P<type>\S+) )?KEY"
             r"(?: +{iq}(?P<name>(?:{esc_fq}|[^{fq}])+){fq})?"
             r"(?: +USING +(?P<using_pre>\S+))?"
@@ -66,8 +68,6 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
     def _parse_constraints(self, line):
         """Parse a CONSTRAINT line."""
         ret = super()._parse_constraints(line)
-        # OceanBase show schema/database in foreign key constraint ddl, even if the schema/database is the default one
-        # logger.info(ret)
         if ret:
             tp, spec = ret
             if tp == "partition":
