@@ -1,10 +1,12 @@
 """gis_func: An extended system function in GIS."""
 
 import logging
-from .geo_srid_point import POINT
+
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy import BINARY, Float, Boolean, Text
+
+from .geo_srid_point import POINT
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +24,7 @@ class ST_GeomFromText(FunctionElement):
 
 @compiles(ST_GeomFromText)
 def compile_ST_GeomFromText(element, compiler, **kwargs): # pylint: disable=unused-argument
+    """Compile ST_GeomFromText function."""
     args = []
     for idx, arg in enumerate(element.args):
         if idx == 0:
@@ -40,13 +43,14 @@ class st_distance(FunctionElement):
     """
     type = Float()
     inherit_cache = True
-    
+
     def __init__(self, *args):
         super().__init__()
         self.args = args
 
 @compiles(st_distance)
 def compile_st_distance(element, compiler, **kwargs): # pylint: disable=unused-argument
+    """Compile st_distance function."""
     args = ", ".join(compiler.process(arg) for arg in element.args)
     return f"st_distance({args})"
 
@@ -66,6 +70,7 @@ class st_dwithin(FunctionElement):
 
 @compiles(st_dwithin)
 def compile_st_dwithin(element, compiler, **kwargs): # pylint: disable=unused-argument
+    """Compile st_dwithin function."""
     args = []
     for idx, arg in enumerate(element.args):
         if idx == 2:
@@ -90,5 +95,6 @@ class st_astext(FunctionElement):
 
 @compiles(st_astext)
 def compile_st_astext(element, compiler, **kwargs): # pylint: disable=unused-argument
+    """Compile st_astext function."""
     args = ", ".join(compiler.process(arg) for arg in element.args)
     return f"st_astext({args})"
