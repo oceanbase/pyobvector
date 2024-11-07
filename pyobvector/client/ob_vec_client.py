@@ -546,6 +546,7 @@ class ObVecClient:
         with_dist: bool = False,
         topk: int = 10,
         output_column_names: Optional[List[str]] = None,
+        extra_output_cols: Optional[List] = None,
         where_clause=None,
         partition_names: Optional[List[str]] = None,
     ):
@@ -567,6 +568,9 @@ class ObVecClient:
             columns = [table.c[column_name] for column_name in output_column_names]
         else:
             columns = [table.c[column.name] for column in table.columns]
+
+        if extra_output_cols is not None:
+            columns.extend(extra_output_cols)
 
         if with_dist:
             columns.append(
