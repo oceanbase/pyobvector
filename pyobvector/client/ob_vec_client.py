@@ -602,6 +602,69 @@ class ObVecClient:
                     stmt_str, f"PARTITION({', '.join(partition_names)})"
                 )
                 return conn.execute(text(stmt_str))
+    
+    def post_ann_search(
+        self,
+        table_name: str,
+        vec_data: list,
+        vec_column_name: str,
+        distance_func,
+        with_dist: bool = False,
+        topk: int = 10,
+        output_column_names: Optional[List[str]] = None,
+        extra_output_cols: Optional[List] = None,
+        where_clause=None,
+        partition_names: Optional[List[str]] = None,
+    ):
+        """perform post ann search.
+
+        Args:
+            table_name (string) : table name
+            vec_data (list) : the vector data to search
+            vec_column_name (string) : which vector field to search
+            distance_func : function to calculate distance between vectors
+            with_dist (bool) : return result with distance
+            topk (int) : top K
+            output_column_names (Optional[List[str]]) : output fields
+            where_clause : do ann search with filter
+        """
+        table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
+
+        columns = []
+        if output_column_names is not None:
+            columns.extend([table.c[column_name] for column_name in output_column_names])
+        else:
+            columns.extend([table.c[column.name] for column in table.columns])
+        if extra_output_cols is not None:
+            columns.extend(extra_output_cols)
+
+        if with_dist:
+            columns.append(
+                distance_func(
+                    table.c[vec_column_name],
+                    "[" + ",".join([str(np.float32(v)) for v in vec_data]) + "]",
+                )
+            )
+        
+        stmt = select(*columns)
+        if where_clause is not None:
+            stmt = stmt.where(*where_clause)
+        stmt = stmt.order_by(
+            distance_func(
+                table.c[vec_column_name],
+                "[" + ",".join([str(np.float32(v)) for v in vec_data]) + "]",
+            )
+        ).limit(topk)
+
+        with self.engine.connect() as conn:
+            with conn.begin():
+                if partition_names is None:
+                    return conn.execute(stmt)
+                stmt_str = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                stmt_str = self._insert_partition_hint_for_query_sql(
+                    stmt_str, f"PARTITION({', '.join(partition_names)})"
+                )
+                return conn.execute(text(stmt_str))
 
     def precise_search(
         self,
