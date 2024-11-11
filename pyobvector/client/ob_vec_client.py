@@ -615,6 +615,7 @@ class ObVecClient:
         extra_output_cols: Optional[List] = None,
         where_clause=None,
         partition_names: Optional[List[str]] = None,
+        str_list: Optional[List[str]] = None,
     ):
         """perform post ann search.
 
@@ -659,11 +660,17 @@ class ObVecClient:
         with self.engine.connect() as conn:
             with conn.begin():
                 if partition_names is None:
+                    if str_list is not None:
+                        str_list.append(
+                            str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                        )
                     return conn.execute(stmt)
                 stmt_str = str(stmt.compile(compile_kwargs={"literal_binds": True}))
                 stmt_str = self._insert_partition_hint_for_query_sql(
                     stmt_str, f"PARTITION({', '.join(partition_names)})"
                 )
+                if str_list is not None:
+                    str_list.append(stmt_str)
                 return conn.execute(text(stmt_str))
 
     def precise_search(
