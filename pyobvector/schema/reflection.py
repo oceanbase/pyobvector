@@ -27,7 +27,6 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
                         self.preparer._escape_identifier(_final),
                     )
                 ],
-                strict=False,
             )
         )
         ### end of block
