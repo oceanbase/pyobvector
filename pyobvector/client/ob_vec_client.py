@@ -549,7 +549,8 @@ class ObVecClient:
         extra_output_cols: Optional[List] = None,
         where_clause=None,
         partition_names: Optional[List[str]] = None,
-    ):
+        **kwargs,
+    ): # pylint: disable=unused-argument
         """perform ann search.
 
         Args:
@@ -602,7 +603,7 @@ class ObVecClient:
                     stmt_str, f"PARTITION({', '.join(partition_names)})"
                 )
                 return conn.execute(text(stmt_str))
-    
+
     def post_ann_search(
         self,
         table_name: str,
@@ -616,7 +617,8 @@ class ObVecClient:
         where_clause=None,
         partition_names: Optional[List[str]] = None,
         str_list: Optional[List[str]] = None,
-    ):
+        **kwargs,
+    ): # pylint: disable=unused-argument
         """perform post ann search.
 
         Args:
@@ -646,7 +648,7 @@ class ObVecClient:
                     "[" + ",".join([str(np.float32(v)) for v in vec_data]) + "]",
                 )
             )
-        
+
         stmt = select(*columns)
         if where_clause is not None:
             stmt = stmt.where(*where_clause)
@@ -682,7 +684,8 @@ class ObVecClient:
         topk: int = 10,
         output_column_names: Optional[List[str]] = None,
         where_clause=None,
-    ):
+        **kwargs,
+    ): # pylint: disable=unused-argument
         """perform precise vector search.
 
         Args:
