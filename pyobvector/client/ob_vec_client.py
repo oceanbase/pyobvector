@@ -65,6 +65,9 @@ class ObVecClient:
         setattr(func_mod, "st_dwithin", st_dwithin)
         setattr(func_mod, "st_astext", st_astext)
 
+        # Escape @ to avoid parsing errors in connection_str
+        password = password.replace('@', '%40')
+        
         connection_str = (
             f"mysql+oceanbase://{user}:{password}@{uri}/{db_name}?charset=utf8mb4"
         )
