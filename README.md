@@ -2,6 +2,8 @@
 
 A python SDK for OceanBase Vector Store, based on SQLAlchemy, compatible with Milvus API.
 
+[![Downloads](https://static.pepy.tech/badge/pyobvector)](https://pepy.tech/project/pyobvector)  [![Downloads](https://static.pepy.tech/badge/pyobvector/month)](https://pepy.tech/project/pyobvector)
+
 ## Installation
 
 - git clone this repo, then install with:
