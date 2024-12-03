@@ -15,7 +15,7 @@ poetry install
 - install with pip:
 
 ```shell
-pip install pyobvector==0.1.15
+pip install pyobvector==0.1.16
 ```
 
 ## Build Doc
@@ -158,10 +158,48 @@ res = self.client.ann_search(
     test_collection_name, 
     vec_data=[0,0,0], 
     vec_column_name='embedding',
-    distance_func=func.l2_distance,
+    distance_func=l2_distance,
     topk=5,
     output_column_names=['id']
 )
 # For example, the result will be:
 # [(112,), (111,), (10,), (11,), (12,)]
 ```
+
+- If you want to use pure `SQLAlchemy` API with `OceanBase` dialect, you can just get an `SQLAlchemy.engine` via `client.engine`. The engine can also be created as following:
+
+```python
+import pyobvector
+from sqlalchemy.dialects import registry
+from sqlalchemy import create_engine
+
+uri: str = "127.0.0.1:2881"
+user: str = "root@test"
+password: str = ""
+db_name: str = "test"
+registry.register("mysql.oceanbase", "pyobvector.schema.dialect", "OceanBaseDialect")
+connection_str = (
+    f"mysql+oceanbase://{user}:{password}@{uri}/{db_name}?charset=utf8mb4"
+)
+engine = create_engine(connection_str, **kwargs)
+```
+
+- Async engine is also supported:
+
+```python
+import pyobvector
+from sqlalchemy.dialects import registry
+from sqlalchemy.ext.asyncio import create_async_engine
+
+uri: str = "127.0.0.1:2881"
+user: str = "root@test"
+password: str = ""
+db_name: str = "test"
+registry.register("mysql.aoceanbase", "pyobvector", "AsyncOceanBaseDialect")
+connection_str = (
+    f"mysql+aoceanbase://{user}:{password}@{uri}/{db_name}?charset=utf8mb4"
+)
+engine = create_async_engine(connection_str)
+```
+
+- For further usage in pure `SQLAlchemy` mode, please refer to [SQLAlchemy](https://www.sqlalchemy.org/)
