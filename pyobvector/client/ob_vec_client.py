@@ -73,6 +73,7 @@ class ObVecClient:
         )
         self.engine = create_engine(connection_str, **kwargs)
         self.metadata_obj = MetaData()
+        self.metadata_obj.reflect(bind=self.engine)
 
         with self.engine.connect() as conn:
             with conn.begin():
