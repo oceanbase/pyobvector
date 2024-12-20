@@ -411,7 +411,10 @@ class MilvusLikeClient(Client):
         stmt = stmt.order_by(distance_func(table.c[anns_field],
             "[" + ",".join([str(np.float32(v)) for v in data]) + "]"))
         stmt_str = (
-            str(stmt.compile(compile_kwargs={"literal_binds": True}))
+            str(stmt.compile(
+                dialect=self.engine.dialect,
+                compile_kwargs={"literal_binds": True}
+            ))
             + f" APPROXIMATE limit {limit}"
         )
 
@@ -482,7 +485,10 @@ class MilvusLikeClient(Client):
                 if partition_names is None:
                     execute_res = conn.execute(stmt)
                 else:
-                    stmt_str = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                    stmt_str = str(stmt.compile(
+                        dialect=self.engine.dialect,
+                        compile_kwargs={"literal_binds": True}
+                    ))
                     stmt_str = self._insert_partition_hint_for_query_sql(
                         stmt_str, f"PARTITION({', '.join(partition_names)})"
                     )
@@ -554,7 +560,10 @@ class MilvusLikeClient(Client):
                 if partition_names is None:
                     execute_res = conn.execute(stmt)
                 else:
-                    stmt_str = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                    stmt_str = str(stmt.compile(
+                        dialect=self.engine.dialect,
+                        compile_kwargs={"literal_binds": True}
+                    ))
                     stmt_str = self._insert_partition_hint_for_query_sql(
                         stmt_str, f"PARTITION({', '.join(partition_names)})"
                     )

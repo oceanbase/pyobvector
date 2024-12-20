@@ -10,10 +10,10 @@ logger.setLevel(logging.DEBUG)
 
 class ObVecClientTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.client = ObVecClient() # Set your link string.
+        self.client = ObVecClient(echo=True) # Set your link string.
 
     def test_ann_search(self):
-        test_collection_name = "ob_ann_test"
+        test_collection_name = "OB文档_ann_test"
         self.client.drop_table_if_exist(test_collection_name)
 
         # create partitioned table

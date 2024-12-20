@@ -520,7 +520,10 @@ class ObVecClient:
                 if partition_names is None:
                     execute_res = conn.execute(stmt)
                 else:
-                    stmt_str = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                    stmt_str = str(stmt.compile(
+                        dialect=self.engine.dialect,
+                        compile_kwargs={"literal_binds": True}
+                    ))
                     stmt_str = self._insert_partition_hint_for_query_sql(
                         stmt_str, f"PARTITION({', '.join(partition_names)})"
                     )
@@ -596,7 +599,10 @@ class ObVecClient:
             )
         )
         stmt_str = (
-            str(stmt.compile(compile_kwargs={"literal_binds": True}))
+            str(stmt.compile(
+                dialect=self.engine.dialect,
+                compile_kwargs={"literal_binds": True}
+            ))
             + f" APPROXIMATE limit {topk}"
         )
         with self.engine.connect() as conn:
@@ -668,10 +674,16 @@ class ObVecClient:
                 if partition_names is None:
                     if str_list is not None:
                         str_list.append(
-                            str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                            str(stmt.compile(
+                                dialect=self.engine.dialect,
+                                compile_kwargs={"literal_binds": True}
+                            ))
                         )
                     return conn.execute(stmt)
-                stmt_str = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                stmt_str = str(stmt.compile(
+                    dialect=self.engine.dialect,
+                    compile_kwargs={"literal_binds": True}
+                ))
                 stmt_str = self._insert_partition_hint_for_query_sql(
                     stmt_str, f"PARTITION({', '.join(partition_names)})"
                 )
