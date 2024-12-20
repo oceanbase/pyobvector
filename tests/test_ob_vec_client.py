@@ -10,7 +10,7 @@ logger.setLevel(logging.DEBUG)
 
 class ObVecClientTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.client = ObVecClient(echo=True) # Set your link string.
+        self.client = ObVecClient() # Set your link string.
 
     def test_ann_search(self):
         test_collection_name = "OB文档_ann_test"
