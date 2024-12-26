@@ -11,6 +11,8 @@ numpy = ">=1.26.0,<2.0.0"
 sqlalchemy = ">=1.4,<2.0.36"
 pymysql = "^1.1.1"
 aiomysql = "^0.2.0"
+sqlglot = "^26.0.1"
+pydantic = "^2.10.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
