@@ -1,15 +1,24 @@
 import json
 import logging
+import re
 from typing import Dict, List, Optional, Any
 
 from pydantic import BaseModel, create_model
-from sqlalchemy import Column, Integer, String, JSON, Engine, select
+from sqlalchemy import Column, Integer, String, JSON, Engine, select, text
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlglot import parse_one, exp, Expression
 
 from .ob_vec_client import ObVecClient
-from ..json_table import OceanBase, ChangeColumn
+from ..json_table import (
+    OceanBase,
+    ChangeColumn,
+    JsonTableBool,
+    JsonTableTimestamp,
+    JsonTableVarcharFactory,
+    JsonTableDecimalFactory,
+    JsonTableInt,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -44,17 +53,35 @@ class ObVecJsonTableClient(ObVecClient):
         def __init__(self, user_id: int):
             self.user_id = user_id
             self.meta_cache: Dict[str, List] = {}
-            # self.model: Dict[str, BaseModel] = {}
 
-        # def _create_dynamic_model(self, model_name: str, col_meta_list: List[Dict[str, Any]]) -> BaseModel:
-        #     model_fields = {}
-        #     for col_meta in col_meta_list:
-        #         if col_meta['jcol_type'] == "TINYINT":
-        #             if not col_meta['jcol_has_default']:
-        #                 model_fields[col_meta['jcol_name']] = (str, ...)
-                    
-        #     pass
-            # return create_model(model_name, **fields)
+        @classmethod
+        def _parse_col_type(cls, col_type: str):
+            if col_type.startswith('TINYINT'):
+                return JsonTableBool
+            elif col_type.startswith('TIMESTAMP'):
+                return JsonTableTimestamp
+            elif col_type.startswith('INT'):
+                return JsonTableInt
+            elif col_type.startswith('VARCHAR'):
+                if col_type == 'VARCHAR':
+                    factory = JsonTableVarcharFactory(255)
+                else:
+                    varchar_pattern = r'VARCHAR\((\d+)\)'
+                    varchar_matches = re.findall(varchar_pattern, col_type)
+                    factory = JsonTableVarcharFactory(int(varchar_matches[0]))
+                model = factory.get_json_table_varchar_type()
+                return model
+            elif col_type.startswith('DECIMAL'):
+                if col_type == 'DECIMAL':
+                    factory = JsonTableDecimalFactory(10, 0)
+                else:
+                    decimal_pattern = r'DECIMAL\((\d+),\s*(\d+)\)'
+                    decimal_matches = re.findall(decimal_pattern, col_type)
+                    x, y = decimal_matches[0]
+                    factory = JsonTableDecimalFactory(int(x), int(y))
+                model = factory.get_json_table_decimal_type()
+                return model
+            raise ValueError(f"Invalid column type string: {col_type}")
 
         def reflect(self, engine: Engine):
             self.meta_cache = {}
@@ -78,6 +105,7 @@ class ObVecJsonTableClient(ObVecClient):
                                 if isinstance(r[7], dict) else
                                 json.loads(r[7])['default']
                             ),
+                            'jcol_model': ObVecJsonTableClient.JsonTableMetadata._parse_col_type(r[4])
                         })
                     for k, _ in self.meta_cache.items():
                         self.meta_cache[k].sort(key=lambda x: x['jcol_id'])
@@ -99,6 +127,15 @@ class ObVecJsonTableClient(ObVecClient):
         self.Base.metadata.create_all(self.engine)
         self.user_id = user_id
         self.jmetadata = ObVecJsonTableClient.JsonTableMetadata(self.user_id)
+        self.jmetadata.reflect(self.engine)
+
+    def _reset(self):
+        # Only for test
+        self.perform_raw_text_sql("TRUNCATE TABLE _data_json_t")
+        self.perform_raw_text_sql("TRUNCATE TABLE _meta_json_t")
+        self.jmetadata = ObVecJsonTableClient.JsonTableMetadata(self.user_id)
+    
+    def refresh_metadata(self):
         self.jmetadata.reflect(self.engine)
 
     def perform_json_table_sql(self, sql: str):
@@ -127,6 +164,13 @@ class ObVecJsonTableClient(ObVecClient):
             return "DECIMAL"
         raise ValueError(f"{datatype} not supported")
     
+    def _calc_default_value(self, default_val):
+        with self.engine.connect() as conn:
+            res = conn.execute(text(f"SELECT {default_val}"))
+            for r in res:
+                logger.info(f"============== Calculate default value: {r[0]}")
+                return r[0]
+    
     def _handle_create_json_table(self, ast: Expression):
         logger.info("HANDLE CREATE JSON TABLE")
 
@@ -151,7 +195,6 @@ class ObVecJsonTableClient(ObVecClient):
         for col_def in ast.find_all(exp.ColumnDef):
             col_name = col_def.this.this
             col_type_str = self._parse_datatype_to_str(col_def.kind.this)
-            col_type_str_prefix = col_type_str
             col_type_params = col_def.kind.expressions
             col_type_params_list = []
             col_nullable = True
@@ -164,19 +207,24 @@ class ObVecJsonTableClient(ObVecClient):
                     col_type_params_list.append(f"{param.this}")
             if len(col_type_params_list) > 0:
                 col_type_str += '(' + ','.join(col_type_params_list) + ')'
+            col_type_model = ObVecJsonTableClient.JsonTableMetadata._parse_col_type(col_type_str)
             
             for cons in col_def.constraints:
                 if isinstance(cons.kind, exp.DefaultColumnConstraint):
                     col_has_default = True
-                    # if cons.kind.this.is_string or (col_type_str_prefix in ["VARCHAR"]):
-                    #     col_default_val = "\'" + cons.kind.this.this + "\'"
-                    # else:
-                    col_default_val = cons.kind.this.this
+                    logger.info(f"############ create jtable ########### {str(cons.kind.this)}")
+                    col_default_val = str(cons.kind.this)
+                    if col_default_val.upper() == "NULL":
+                        col_default_val = None
                 elif isinstance(cons.kind, exp.NotNullColumnConstraint):
                     col_nullable = False
                 else:
                     raise ValueError(f"{cons.kind} constriaint is not supported.")
             
+            if col_has_default and (col_default_val is not None):
+                # check default value is valid
+                col_type_model(val=self._calc_default_value(col_default_val))
+
             if (not col_nullable) and col_has_default and (col_default_val is None):
                 raise ValueError(f"Invalid default value for '{col_name}'")
 
@@ -192,6 +240,7 @@ class ObVecJsonTableClient(ObVecClient):
                 'jcol_nullable': col_nullable,
                 'jcol_has_default': col_has_default,
                 'jcol_default': col_default_val,
+                'jcol_model': col_type_model,
             })
             session.add(ObVecJsonTableClient.JsonTableMetaTBL(
                 user_id = self.user_id,
@@ -241,16 +290,16 @@ class ObVecJsonTableClient(ObVecClient):
             col_type_str += '(' + ','.join(col_type_params_list) + ')'
         return col_type_str
     
-    def _parse_col_constraints(self, expr: Expression, datatype) -> Dict:
+    def _parse_col_constraints(self, expr: Expression) -> Dict:
         col_has_default = False
         col_nullable = True
         for cons in expr:
             if isinstance(cons.kind, exp.DefaultColumnConstraint):
                 col_has_default = True
-                # if cons.kind.this.is_string or (self._parse_datatype_to_str(datatype) in ["VARCHAR"]):
-                #     col_default_val = "\'" + cons.kind.this.this + "\'"
-                # else:
-                col_default_val = cons.kind.this.this
+                logger.info(f"############ column constraints ########### {str(cons.kind.this)}")
+                col_default_val = str(cons.kind.this)
+                if col_default_val.upper() == "NULL":
+                    col_default_val = None
             elif isinstance(cons.kind, exp.NotNullColumnConstraint):
                 col_nullable = False
             else:
@@ -328,7 +377,10 @@ class ObVecJsonTableClient(ObVecClient):
             raise ValueError(f"{new_col_name} exists!")
         
         col_type_str = self._parse_col_datatype(add_col.kind)
-        constraints = self._parse_col_constraints(add_col.constraints, add_col.kind.this)
+        model = ObVecJsonTableClient.JsonTableMetadata._parse_col_type(col_type_str)
+        constraints = self._parse_col_constraints(add_col.constraints)
+        if constraints['jcol_has_default'] and (constraints['jcol_default'] is not None):
+            model(val=self._calc_default_value(constraints['jcol_default']))
         cur_col_id = max([meta['jcol_id'] for meta in self.jmetadata.meta_cache[jtable_name]]) + 1
 
         session.add(ObVecJsonTableClient.JsonTableMetaTBL(
@@ -359,7 +411,10 @@ class ObVecJsonTableClient(ObVecClient):
             raise ValueError(f"{col_name} not exists in {jtable_name}")
         
         col_type_str = self._parse_col_datatype(col_def.kind)
-        constraints = self._parse_col_constraints(col_def.constraints, col_def.kind.this)
+        model = ObVecJsonTableClient.JsonTableMetadata._parse_col_type(col_type_str)
+        constraints = self._parse_col_constraints(col_def.constraints)
+        if constraints['jcol_has_default'] and (constraints['jcol_default'] is not None):
+            model(val=self._calc_default_value(constraints['jcol_default']))
 
         session.query(ObVecJsonTableClient.JsonTableMetaTBL).filter_by(
             user_id=self.user_id,
