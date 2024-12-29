@@ -102,3 +102,13 @@ class JsonTableDecimalFactory:
 class JsonTableInt(JsonTableDataType):
     type: JType = Field(default=JType.J_INT)
     val: Optional[int]
+
+def val2json(val):
+    if val is None:
+        return None
+    if isinstance(val, int) or isinstance(val, bool) or isinstance(val, str):
+        return val
+    if isinstance(val, datetime):
+        return val.isoformat()
+    if isinstance(val, Decimal):
+        return float(val)

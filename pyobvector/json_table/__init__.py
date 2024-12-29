@@ -7,6 +7,7 @@ from .virtual_data_type import (
     JsonTableVarcharFactory,
     JsonTableDecimalFactory,
     JsonTableInt,
+    val2json,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "JsonTableVarcharFactory",
     "JsonTableDecimalFactory",
     "JsonTableInt",
+    "val2json",
 ]

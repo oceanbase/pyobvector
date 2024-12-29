@@ -3,7 +3,6 @@ import logging
 import re
 from typing import Dict, List, Optional, Any
 
-from pydantic import BaseModel, create_model
 from sqlalchemy import Column, Integer, String, JSON, Engine, select, text
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -18,6 +17,7 @@ from ..json_table import (
     JsonTableVarcharFactory,
     JsonTableDecimalFactory,
     JsonTableInt,
+    val2json,
 )
 
 logger = logging.getLogger(__name__)
@@ -150,6 +150,12 @@ class ObVecJsonTableClient(ObVecClient):
             self._handle_alter_json_table(ast)
         elif isinstance(ast, exp.Insert):
             self._handle_jtable_dml_insert(ast)
+        elif isinstance(ast, exp.Update):
+            self._handle_jtable_dml_update(ast)
+        elif isinstance(ast, exp.Delete):
+            self._handle_jtable_dml_delete(ast)
+        elif isinstance(ast, exp.Select):
+            self._handle_jtable_dml_select(ast)
         
     def _parse_datatype_to_str(self, datatype):
         if datatype == exp.DataType.Type.INT:
@@ -165,6 +171,8 @@ class ObVecJsonTableClient(ObVecClient):
         raise ValueError(f"{datatype} not supported")
     
     def _calc_default_value(self, default_val):
+        if default_val is None:
+            return None
         with self.engine.connect() as conn:
             res = conn.execute(text(f"SELECT {default_val}"))
             for r in res:
@@ -507,21 +515,164 @@ class ObVecJsonTableClient(ObVecClient):
     def _handle_jtable_dml_insert(self, ast: Expression):
         if isinstance(ast.this, exp.Schema):
             table_name = ast.this.this.this.this
+        else:
+            table_name = ast.this.this.this
+        if not self._check_table_exists(table_name):
+            raise ValueError(f"Table {table_name} does not exists")
+        
+        table_col_names = [meta['jcol_name'] for meta in self.jmetadata.meta_cache[table_name]]
+        cols = {
+            meta['jcol_name']: meta
+            for meta in self.jmetadata.meta_cache[table_name]
+        }
+        if isinstance(ast.this, exp.Schema):
             insert_col_names = [expr.this for expr in ast.this.expressions]
-            table_col_names = [meta['jcol_name'] for meta in self.jmetadata.meta_cache[table_name]]
             for col_name in insert_col_names:
                 if col_name not in table_col_names:
                     raise ValueError(f"Unknown column {col_name} in field list")
-            cols = []
             for meta in self.jmetadata.meta_cache[table_name]:
                 if ((meta['jcol_name'] not in insert_col_names) and
                     (not meta['jcol_nullable']) and (not meta['jcol_has_default'])):
                     raise ValueError(f"Field {meta['jcol_name']} does not have a default value")
-                cols.append(meta)
         elif isinstance(ast.this, exp.Table):
-            table_name = ast.this.this.this
-            cols = self.jmetadata.meta_cache[table_name]
+            insert_col_names = table_col_names
+        else:
+            raise ValueError(f"Invalid ast type {ast.this}")
 
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
         for tuple in ast.expression.expressions:
-            
-            pass
+            expr_list = tuple.expressions
+            if len(expr_list) != len(insert_col_names):
+                raise ValueError(f"Values Tuple length does not match with the length of insert columns")
+            kv = {}
+            for col_name, expr in zip(insert_col_names, expr_list):
+                model = cols[col_name]['jcol_model']
+                datum = model(val=self._calc_default_value(str(expr)))
+                kv[col_name] = val2json(datum.val)
+            for col_name in table_col_names:
+                if col_name not in insert_col_names:
+                    model = cols[col_name]['jcol_model']
+                    datum = model(val=self._calc_default_value(cols[col_name]['jcol_default']))
+                    kv[col_name] = val2json(datum.val)
+
+            logger.info(f"================= [INSERT] =============== {kv}")
+
+            session.add(ObVecJsonTableClient.JsonTableDataTBL(
+                user_id = self.user_id,
+                jtable_name = table_name,
+                jdata = kv,
+            ))
+        
+        try:
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error occurred: {e}")
+        finally:
+            session.close()
+
+    def _handle_jtable_dml_update(self, ast: Expression):
+        table_name = ast.this.this.this
+        if not self._check_table_exists(table_name):
+            raise ValueError(f"Table {table_name} does not exists")
+        
+        path_settings = []
+        for expr in ast.expressions:
+            col_name = expr.this.this.this
+            if not self._check_col_exists(table_name, col_name):
+                raise ValueError(f"Column {col_name} does not exists")
+            col_expr = expr.expression
+            path_settings.append(f"'$.{col_name}', {str(col_expr)}")
+
+        where_clause = None        
+        if 'where' in ast.args.keys():
+            for column in ast.args['where'].find_all(exp.Column):
+                where_col_name = column.this.this
+                if not self._check_col_exists(table_name, where_col_name):
+                    raise ValueError(f"Column {where_col_name} does not exists")
+                column.parent.args['this'] = parse_one(f"JSON_VALUE(jdata, '$.{where_col_name}')")
+            where_clause = f"user_id = {self.user_id} AND jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+        
+        if where_clause:
+            update_sql = f"UPDATE _data_json_t SET jdata = JSON_REPLACE(jdata, {', '.join(path_settings)}) WHERE {where_clause}"
+        else:
+            update_sql = f"UPDATE _data_json_t SET jdata = JSON_REPLACE(jdata, {', '.join(path_settings)})"
+
+        logger.info(f"===================== do update: {update_sql}")
+        self.perform_raw_text_sql(update_sql)
+
+    def _handle_jtable_dml_delete(self, ast: Expression):
+        table_name = ast.this.this.this
+        if not self._check_table_exists(table_name):
+            raise ValueError(f"Table {table_name} does not exists")
+        
+        where_clause = None
+        if 'where' in ast.args.keys():
+            for column in ast.args['where'].find_all(exp.Column):
+                where_col_name = column.this.this
+                if not self._check_col_exists(table_name, where_col_name):
+                    raise ValueError(f"Column {where_col_name} does not exists")
+                column.parent.args['this'] = parse_one(f"JSON_VALUE(jdata, '$.{where_col_name}')")
+            where_clause = f"user_id = {self.user_id} AND jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+        
+        if where_clause:
+            delete_sql = f"DELETE FROM _data_json_t WHERE {where_clause}"
+        else:
+            delete_sql = f"DELETE FROM _data_json_t"
+
+        logger.info(f"===================== do delete: {delete_sql}")
+        self.perform_raw_text_sql(delete_sql)
+
+    def _get_full_datatype(self, jdata_type: str):
+        if jdata_type.upper() == "VARCHAR":
+            return "VARCHAR(255)"
+        if jdata_type.upper() == "DECIMAL":
+            return "DECIMAL(10, 0)"
+        return jdata_type
+
+    def _handle_jtable_dml_select(self, ast: Expression):
+        table_name = ast.args['from'].this.this.this
+        if not self._check_table_exists(table_name):
+            raise ValueError(f"Table {table_name} does not exists")
+        
+        ast.args['from'].args['this'].args['this'].args['this'] = '_data_json_t'
+
+        col_meta = self.jmetadata.meta_cache[table_name]
+        json_table_meta_str = []
+        for meta in col_meta:
+            json_table_meta_str.append(
+                f"{meta['jcol_name']} {self._get_full_datatype(meta['jcol_type'])} "
+                f"PATH '$.{meta['jcol_name']}'"
+            )
+        tmp_table_name = "__tmp"
+        json_table_str = f"json_table(jdata, '$' COLUMNS ({', '.join(json_table_meta_str)})) {tmp_table_name}"
+
+        for col in ast.find_all(exp.Column):
+            if 'table' in col.args.keys():
+                col.args['table'].args['this'] = tmp_table_name
+            else:
+                identifier = exp.Identifier()
+                identifier.args['this'] = tmp_table_name
+                identifier.args['quoted'] = False
+                col.args['table'] = identifier
+
+        join_clause = parse_one(f"from t1, {json_table_str}")
+        join_node = join_clause.args['joins'][0]
+        if 'joins' in ast.args.keys():
+            ast.args['joins'].append(join_node)
+        else:
+            ast.args['joins'] = [join_node]
+
+        extra_filter_str = f"user_id = {self.user_id} AND jtable_name = '{table_name}'"
+        if 'where' in ast.args.keys():
+            filter_str = str(ast.args['where'].args['this'])
+            new_filter_str = f"{extra_filter_str} AND ({filter_str})"
+            ast.args['where'].args['this'] = parse_one(new_filter_str)
+        else:
+            where_clause = exp.Where()
+            where_clause.args['this'] = parse_one(extra_filter_str)
+            ast.args['where'] = where_clause
+
+        select_sql = str(ast)
+        logger.info(f"===================== do select: {select_sql}")

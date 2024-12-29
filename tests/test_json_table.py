@@ -153,3 +153,38 @@ class ObVecJsonTableTest(unittest.TestCase):
                 {'jcol_id': 21, 'jcol_name': 'date', 'jcol_type': 'TIMESTAMP', 'jcol_nullable': True, 'jcol_has_default': True, 'jcol_default': 'CURRENT_TIMESTAMP()'}
             ]
         )
+    
+    def test_insert(self):
+        self.client._reset()
+        keys_to_check = ['jcol_id', 'jcol_name', 'jcol_type', 'jcol_nullable', 'jcol_has_default', 'jcol_default']
+        self.client.perform_json_table_sql(
+            "create table `t1` (c1 int DEFAULT NULL, c2 varchar(30) DEFAULT 'ca', c3 varchar not null, c4 decimal(10, 2), c5 TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+        )
+        self.assertEqual(sub_dict(self.client.jmetadata.meta_cache['t1'], keys_to_check), 
+            [
+                {'jcol_id': 16, 'jcol_name': 'c1', 'jcol_type': 'INT', 'jcol_nullable': True, 'jcol_has_default': True, 'jcol_default': None},
+                {'jcol_id': 17, 'jcol_name': 'c2', 'jcol_type': 'VARCHAR(30)', 'jcol_nullable': True, 'jcol_has_default': True, 'jcol_default': "'ca'"},
+                {'jcol_id': 18, 'jcol_name': 'c3', 'jcol_type': 'VARCHAR', 'jcol_nullable': False, 'jcol_has_default': False, 'jcol_default': None},
+                {'jcol_id': 19, 'jcol_name': 'c4', 'jcol_type': 'DECIMAL(10,2)', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+                {'jcol_id': 20, 'jcol_name': 'c5', 'jcol_type': 'TIMESTAMP', 'jcol_nullable': True, 'jcol_has_default': True, 'jcol_default': 'CURRENT_TIMESTAMP()'}
+            ]
+        )
+
+        self.client.perform_json_table_sql(
+            "insert into t1 (c2, c3) values ('hello', 'foo'), ('world', 'bar')"
+        )
+        self.client.perform_json_table_sql(
+            "insert into t1 values (1+2, 'baz', 'oceanbase', 12.3+45.6, CURRENT_TIMESTAMP)"
+        )
+
+        self.client.perform_json_table_sql(
+            "update t1 set c1=10+10, c2='updated' where c3='oceanbase'"
+        )
+
+        self.client.perform_json_table_sql(
+            "delete from t1 where c1 is NULL"
+        )
+
+        self.client.perform_json_table_sql(
+            "select c1, c2, t1.c3 from t1 where c1 > 21"
+        )
