@@ -16,9 +16,6 @@ def sub_dict(d_list, keys):
 
 class ObVecJsonTableTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.common_client = ObVecClient()
-        self.common_client.perform_raw_text_sql("TRUNCATE TABLE _data_json_t")
-        self.common_client.perform_raw_text_sql("TRUNCATE TABLE _meta_json_t")
         self.client = ObVecJsonTableClient(user_id=1)
     
     def test_create_and_alter_jtable(self):
