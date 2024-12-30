@@ -188,3 +188,15 @@ class ObVecJsonTableTest(unittest.TestCase):
         self.client.perform_json_table_sql(
             "select c1, c2, t1.c3 from t1 where c1 > 21"
         )
+        self.client.perform_json_table_sql(
+            "alter table t1 drop column c3"
+        )
+        self.client.perform_json_table_sql(
+            "alter table t1 add column new_col TIMESTAMP default CURRENT_TIMESTAMP"
+        )
+        self.client.perform_json_table_sql(
+            "alter table t1 modify column c4 INT DEFAULT 10"
+        )
+        self.client.perform_json_table_sql(
+            "alter table t1 change column c1 change_col DECIMAL(10,2)"
+        )

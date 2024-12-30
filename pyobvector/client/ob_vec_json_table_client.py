@@ -3,7 +3,7 @@ import logging
 import re
 from typing import Dict, List, Optional, Any
 
-from sqlalchemy import Column, Integer, String, JSON, Engine, select, text
+from sqlalchemy import Column, Integer, String, JSON, Engine, select, text, func
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlglot import parse_one, exp, Expression
@@ -18,6 +18,7 @@ from ..json_table import (
     JsonTableDecimalFactory,
     JsonTableInt,
     val2json,
+    json_value
 )
 
 logger = logging.getLogger(__name__)
@@ -349,8 +350,35 @@ class ObVecJsonTableClient(ObVecClient):
             },
         })
 
-        # TODO: update json data
+        session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
+            user_id=self.user_id,
+            jtable_name=jtable_name,
+        ).update({
+            ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_insert(
+                func.json_remove(
+                    ObVecJsonTableClient.JsonTableDataTBL.jdata, f'$.{origin_col_name}'
+                ),
+                f'$.{new_col_name}',
+                func.json_value(
+                    ObVecJsonTableClient.JsonTableDataTBL.jdata, f'$.{origin_col_name}',
+                ),
+            )
+        })
 
+        session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
+            user_id=self.user_id,
+            jtable_name=jtable_name,
+        ).update({
+            ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_replace(
+                ObVecJsonTableClient.JsonTableDataTBL.jdata,
+                f'$.{new_col_name}',
+                json_value(
+                    ObVecJsonTableClient.JsonTableDataTBL.jdata,
+                    f'$.{new_col_name}',
+                    col_type_str,
+                ),
+            )
+        })
 
     def _handle_alter_jtable_drop_column(
         self,
@@ -371,7 +399,14 @@ class ObVecJsonTableClient(ObVecClient):
             jcol_name=col_name
         ).delete()
 
-        # TODO: update json data
+        session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
+            user_id=self.user_id,
+            jtable_name=jtable_name,
+        ).update({
+            ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_remove(
+                ObVecJsonTableClient.JsonTableDataTBL.jdata, f'$.{col_name}'
+            )
+        })
 
     def _handle_alter_jtable_add_column(
         self,
@@ -404,7 +439,31 @@ class ObVecJsonTableClient(ObVecClient):
             }
         ))
 
-        # TODO: update json data
+        if constraints['jcol_default'] is None:
+            session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
+                user_id=self.user_id,
+                jtable_name=jtable_name,
+            ).update({
+                ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_insert(
+                    ObVecJsonTableClient.JsonTableDataTBL.jdata,
+                    f'$.{new_col_name}',
+                    None,
+                )
+            })
+        else:
+            model = ObVecJsonTableClient.JsonTableMetadata._parse_col_type(col_type_str)
+            datum = model(val=self._calc_default_value(constraints['jcol_default']))
+            json_val = val2json(datum.val)
+            session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
+                user_id=self.user_id,
+                jtable_name=jtable_name,
+            ).update({
+                ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_insert(
+                    ObVecJsonTableClient.JsonTableDataTBL.jdata,
+                    f'$.{new_col_name}',
+                    json_val,
+                )
+            })
 
     def _handle_alter_jtable_modify_column(
         self,
@@ -438,7 +497,42 @@ class ObVecJsonTableClient(ObVecClient):
             },
         })
 
-        # TODO: update json data
+        if constraints['jcol_default'] is None:
+            session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
+                user_id=self.user_id,
+                jtable_name=jtable_name,
+            ).update({
+                ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_replace(
+                    ObVecJsonTableClient.JsonTableDataTBL.jdata,
+                    f'$.{col_name}',
+                    json_value(
+                        ObVecJsonTableClient.JsonTableDataTBL.jdata,
+                        f'$.{col_name}',
+                        col_type_str,
+                    ),
+                )
+            })
+        else:
+            model = ObVecJsonTableClient.JsonTableMetadata._parse_col_type(col_type_str)
+            datum = model(val=self._calc_default_value(constraints['jcol_default']))
+            json_val = val2json(datum.val)
+            session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
+                user_id=self.user_id,
+                jtable_name=jtable_name,
+            ).update({
+                ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_replace(
+                    ObVecJsonTableClient.JsonTableDataTBL.jdata,
+                    f'$.{col_name}',
+                    func.ifnull(
+                        json_value(
+                            ObVecJsonTableClient.JsonTableDataTBL.jdata,
+                            f'$.{col_name}',
+                            col_type_str,
+                        ),
+                        json_val,
+                    ),
+                )
+            })
 
     def _handle_alter_jtable_rename_table(
         self,

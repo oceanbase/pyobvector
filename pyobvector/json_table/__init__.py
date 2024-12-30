@@ -9,6 +9,7 @@ from .virtual_data_type import (
     JsonTableInt,
     val2json,
 )
+from .json_value_returning_func import json_value
 
 __all__ = [
     "OceanBase", "ChangeColumn",
@@ -20,4 +21,5 @@ __all__ = [
     "JsonTableDecimalFactory",
     "JsonTableInt",
     "val2json",
+    "json_value"
 ]
