@@ -24,6 +24,8 @@ from ..json_table import (
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+JSON_TABLE_META_TABLE_NAME = "_meta_json_t"
+JSON_TABLE_DATA_TABLE_NAME = "_data_json_t"
 
 class ObVecJsonTableClient(ObVecClient):
     """OceanBase Vector Store Client with JSON Table."""
@@ -31,7 +33,7 @@ class ObVecJsonTableClient(ObVecClient):
     Base = declarative_base()
 
     class JsonTableMetaTBL(Base):
-        __tablename__ = '_meta_json_t'
+        __tablename__ = JSON_TABLE_META_TABLE_NAME
         
         user_id = Column(Integer, primary_key=True)
         jtable_name = Column(String(512), primary_key=True)
@@ -43,7 +45,7 @@ class ObVecJsonTableClient(ObVecClient):
         jcol_default = Column(JSON)
 
     class JsonTableDataTBL(Base):
-        __tablename__ = '_data_json_t'
+        __tablename__ = JSON_TABLE_DATA_TABLE_NAME
 
         user_id = Column(Integer, primary_key=True)
         jtable_name = Column(String(512), primary_key=True)
@@ -132,8 +134,8 @@ class ObVecJsonTableClient(ObVecClient):
 
     def _reset(self):
         # Only for test
-        self.perform_raw_text_sql("TRUNCATE TABLE _data_json_t")
-        self.perform_raw_text_sql("TRUNCATE TABLE _meta_json_t")
+        self.perform_raw_text_sql(f"TRUNCATE TABLE {JSON_TABLE_DATA_TABLE_NAME}")
+        self.perform_raw_text_sql(f"TRUNCATE TABLE {JSON_TABLE_META_TABLE_NAME}")
         self.jmetadata = ObVecJsonTableClient.JsonTableMetadata(self.user_id)
     
     def refresh_metadata(self):
@@ -194,6 +196,8 @@ class ObVecJsonTableClient(ObVecClient):
         jtable_name = jtable.this.this
         logger.info(jtable_name)
 
+        if jtable_name == JSON_TABLE_META_TABLE_NAME or jtable_name == JSON_TABLE_DATA_TABLE_NAME:
+            raise ValueError(f"Invalid table name: {jtable_name}")
         if jtable_name in self.jmetadata.meta_cache:
             raise ValueError("Table name duplicated")
         
@@ -689,9 +693,9 @@ class ObVecJsonTableClient(ObVecClient):
             where_clause = f"user_id = {self.user_id} AND jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
         
         if where_clause:
-            update_sql = f"UPDATE _data_json_t SET jdata = JSON_REPLACE(jdata, {', '.join(path_settings)}) WHERE {where_clause}"
+            update_sql = f"UPDATE {JSON_TABLE_DATA_TABLE_NAME} SET jdata = JSON_REPLACE(jdata, {', '.join(path_settings)}) WHERE {where_clause}"
         else:
-            update_sql = f"UPDATE _data_json_t SET jdata = JSON_REPLACE(jdata, {', '.join(path_settings)})"
+            update_sql = f"UPDATE {JSON_TABLE_DATA_TABLE_NAME} SET jdata = JSON_REPLACE(jdata, {', '.join(path_settings)})"
 
         logger.info(f"===================== do update: {update_sql}")
         self.perform_raw_text_sql(update_sql)
@@ -711,9 +715,9 @@ class ObVecJsonTableClient(ObVecClient):
             where_clause = f"user_id = {self.user_id} AND jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
         
         if where_clause:
-            delete_sql = f"DELETE FROM _data_json_t WHERE {where_clause}"
+            delete_sql = f"DELETE FROM {JSON_TABLE_DATA_TABLE_NAME} WHERE {where_clause}"
         else:
-            delete_sql = f"DELETE FROM _data_json_t"
+            delete_sql = f"DELETE FROM {JSON_TABLE_DATA_TABLE_NAME}"
 
         logger.info(f"===================== do delete: {delete_sql}")
         self.perform_raw_text_sql(delete_sql)
@@ -730,7 +734,7 @@ class ObVecJsonTableClient(ObVecClient):
         if not self._check_table_exists(table_name):
             raise ValueError(f"Table {table_name} does not exists")
         
-        ast.args['from'].args['this'].args['this'].args['this'] = '_data_json_t'
+        ast.args['from'].args['this'].args['this'].args['this'] = JSON_TABLE_DATA_TABLE_NAME
 
         col_meta = self.jmetadata.meta_cache[table_name]
         json_table_meta_str = []
