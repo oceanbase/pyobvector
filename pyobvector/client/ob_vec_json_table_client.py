@@ -22,7 +22,7 @@ from ..json_table import (
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 JSON_TABLE_META_TABLE_NAME = "_meta_json_t"
 JSON_TABLE_DATA_TABLE_NAME = "_data_json_t"

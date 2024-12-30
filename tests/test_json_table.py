@@ -24,10 +24,12 @@ def get_all_rows(res):
 
 class ObVecJsonTableTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.client = ObVecJsonTableClient(user_id=1)
+        self.root_client = ObVecJsonTableClient(user_id=0)
+        self.client = ObVecJsonTableClient(user_id=1, user="jtuser@test")
     
     def test_create_and_alter_jtable(self):
-        self.client._reset()
+        self.root_client._reset()
+        self.client.refresh_metadata()
         keys_to_check = ['jcol_id', 'jcol_name', 'jcol_type', 'jcol_nullable', 'jcol_has_default', 'jcol_default']
         self.client.perform_json_table_sql(
             "create table `t2` (c1 int NOT NULL DEFAULT 10, c2 varchar(30) DEFAULT 'ca', c3 varchar not null, c4 decimal(10, 2));"
@@ -103,7 +105,8 @@ class ObVecJsonTableTest(unittest.TestCase):
         )
 
     def test_create_and_alter_jtable_evil(self):
-        self.client._reset()
+        self.root_client._reset()
+        self.client.refresh_metadata()
         keys_to_check = ['jcol_id', 'jcol_name', 'jcol_type', 'jcol_nullable', 'jcol_has_default', 'jcol_default']
         self.client.perform_json_table_sql(
             "create table `t1` (c1 int DEFAULT NULL, c2 varchar(30) DEFAULT 'ca', c3 varchar not null, c4 decimal(10, 2), c5 TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
@@ -160,7 +163,8 @@ class ObVecJsonTableTest(unittest.TestCase):
         )
     
     def test_dml(self):
-        self.client._reset()
+        self.root_client._reset()
+        self.client.refresh_metadata()
         keys_to_check = ['jcol_id', 'jcol_name', 'jcol_type', 'jcol_nullable', 'jcol_has_default', 'jcol_default']
         self.client.perform_json_table_sql(
             "create table `t1` (c1 int DEFAULT NULL, c2 varchar(30) DEFAULT 'ca', c3 varchar not null, c4 decimal(10, 2), c5 TIMESTAMP DEFAULT '2024-12-30T03:35:30');"
