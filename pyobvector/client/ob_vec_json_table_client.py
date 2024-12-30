@@ -3,7 +3,7 @@ import logging
 import re
 from typing import Dict, List, Optional, Any
 
-from sqlalchemy import Column, Integer, String, JSON, Engine, select, text, func
+from sqlalchemy import Column, Integer, String, JSON, Engine, select, text, func, CursorResult
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlglot import parse_one, exp, Expression
@@ -114,7 +114,7 @@ class ObVecJsonTableClient(ObVecClient):
                         self.meta_cache[k].sort(key=lambda x: x['jcol_id'])
 
                     for k, v in self.meta_cache.items():
-                        logger.info(f"LOAD TABLE --- {k}: {v}")
+                        logger.debug(f"LOAD TABLE --- {k}: {v}")
 
 
     def __init__(
@@ -128,6 +128,7 @@ class ObVecJsonTableClient(ObVecClient):
     ):
         super().__init__(uri, user, password, db_name, **kwargs)
         self.Base.metadata.create_all(self.engine)
+        self.session = sessionmaker(bind=self.engine)
         self.user_id = user_id
         self.jmetadata = ObVecJsonTableClient.JsonTableMetadata(self.user_id)
         self.jmetadata.reflect(self.engine)
@@ -138,10 +139,10 @@ class ObVecJsonTableClient(ObVecClient):
         self.perform_raw_text_sql(f"TRUNCATE TABLE {JSON_TABLE_META_TABLE_NAME}")
         self.jmetadata = ObVecJsonTableClient.JsonTableMetadata(self.user_id)
     
-    def refresh_metadata(self):
+    def refresh_metadata(self) -> None:
         self.jmetadata.reflect(self.engine)
 
-    def perform_json_table_sql(self, sql: str):
+    def perform_json_table_sql(self, sql: str) -> Optional[CursorResult]:
         """Perform common SQL that operates on JSON Table."""
         ast = parse_one(sql, dialect="oceanbase")
         if isinstance(ast, exp.Create):
@@ -149,16 +150,23 @@ class ObVecJsonTableClient(ObVecClient):
                 self._handle_create_json_table(ast)
             else:
                 raise ValueError(f"Create {ast.kind} is not supported")
+            return None
         elif isinstance(ast, exp.Alter):
             self._handle_alter_json_table(ast)
+            return None
         elif isinstance(ast, exp.Insert):
             self._handle_jtable_dml_insert(ast)
+            return None
         elif isinstance(ast, exp.Update):
             self._handle_jtable_dml_update(ast)
+            return None
         elif isinstance(ast, exp.Delete):
             self._handle_jtable_dml_delete(ast)
+            return None
         elif isinstance(ast, exp.Select):
-            self._handle_jtable_dml_select(ast)
+            return self._handle_jtable_dml_select(ast)
+        else:
+            raise ValueError(f"{type(ast)} not supported")
         
     def _parse_datatype_to_str(self, datatype):
         if datatype == exp.DataType.Type.INT:
@@ -179,11 +187,11 @@ class ObVecJsonTableClient(ObVecClient):
         with self.engine.connect() as conn:
             res = conn.execute(text(f"SELECT {default_val}"))
             for r in res:
-                logger.info(f"============== Calculate default value: {r[0]}")
+                logger.debug(f"============== Calculate default value: {r[0]}")
                 return r[0]
     
     def _handle_create_json_table(self, ast: Expression):
-        logger.info("HANDLE CREATE JSON TABLE")
+        logger.debug("HANDLE CREATE JSON TABLE")
 
         if not isinstance(ast.this, exp.Schema):
             raise ValueError("Invalid create table statement")
@@ -194,15 +202,13 @@ class ObVecJsonTableClient(ObVecClient):
         if not isinstance(jtable.this, exp.Identifier):
             raise ValueError("Invalid create table statement")
         jtable_name = jtable.this.this
-        logger.info(jtable_name)
 
         if jtable_name == JSON_TABLE_META_TABLE_NAME or jtable_name == JSON_TABLE_DATA_TABLE_NAME:
             raise ValueError(f"Invalid table name: {jtable_name}")
         if jtable_name in self.jmetadata.meta_cache:
             raise ValueError("Table name duplicated")
         
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
+        session = self.session()
         new_meta_cache_items = []
         col_id = 16
         for col_def in ast.find_all(exp.ColumnDef):
@@ -225,7 +231,7 @@ class ObVecJsonTableClient(ObVecClient):
             for cons in col_def.constraints:
                 if isinstance(cons.kind, exp.DefaultColumnConstraint):
                     col_has_default = True
-                    logger.info(f"############ create jtable ########### {str(cons.kind.this)}")
+                    logger.debug(f"############ create jtable ########### {str(cons.kind.this)}")
                     col_default_val = str(cons.kind.this)
                     if col_default_val.upper() == "NULL":
                         col_default_val = None
@@ -241,7 +247,7 @@ class ObVecJsonTableClient(ObVecClient):
             if (not col_nullable) and col_has_default and (col_default_val is None):
                 raise ValueError(f"Invalid default value for '{col_name}'")
 
-            logger.info(
+            logger.debug(
                 f"col_name={col_name}, col_id={col_id}, "
                 f"col_type_str={col_type_str}, col_nullable={col_nullable}, "
                 f"col_has_default={col_has_default}, col_default_val={col_default_val}"
@@ -273,7 +279,7 @@ class ObVecJsonTableClient(ObVecClient):
         try:
             session.commit()
             self.jmetadata.meta_cache[jtable_name] = new_meta_cache_items
-            logger.info(f"ADD METADATA CACHE ---- {jtable_name}: {new_meta_cache_items}")
+            logger.debug(f"ADD METADATA CACHE ---- {jtable_name}: {new_meta_cache_items}")
         except Exception as e:
             session.rollback()
             logger.error(f"Error occurred: {e}")
@@ -309,7 +315,7 @@ class ObVecJsonTableClient(ObVecClient):
         for cons in expr:
             if isinstance(cons.kind, exp.DefaultColumnConstraint):
                 col_has_default = True
-                logger.info(f"############ column constraints ########### {str(cons.kind.this)}")
+                logger.debug(f"############ column constraints ########### {str(cons.kind.this)}")
                 col_default_val = str(cons.kind.this)
                 if col_default_val.upper() == "NULL":
                     col_default_val = None
@@ -329,7 +335,7 @@ class ObVecJsonTableClient(ObVecClient):
         jtable_name: str,
         change_col: Expression,
     ):
-        logger.info("HANDLE ALTER CHANGE COLUMN")
+        logger.debug("HANDLE ALTER CHANGE COLUMN")
         origin_col_name = change_col.origin_col_name.this
         if not self._check_col_exists(jtable_name, origin_col_name):
             raise ValueError(f"{origin_col_name} not exists in {jtable_name}")
@@ -390,7 +396,7 @@ class ObVecJsonTableClient(ObVecClient):
         jtable_name: str,
         drop_col: Expression,
     ):
-        logger.info("HANDLE ALTER DROP COLUMN")
+        logger.debug("HANDLE ALTER DROP COLUMN")
         if not isinstance(drop_col.this, exp.Column):
             raise ValueError(f"Drop {drop_col.kind} is not supported")
         col_name = drop_col.this.this.this
@@ -418,7 +424,7 @@ class ObVecJsonTableClient(ObVecClient):
         jtable_name: str,
         add_col: Expression,
     ):
-        logger.info("HANDLE ALTER ADD COLUMN")
+        logger.debug("HANDLE ALTER ADD COLUMN")
         new_col_name = add_col.this.this
         if self._check_col_exists(jtable_name, new_col_name):
             raise ValueError(f"{new_col_name} exists!")
@@ -426,6 +432,8 @@ class ObVecJsonTableClient(ObVecClient):
         col_type_str = self._parse_col_datatype(add_col.kind)
         model = ObVecJsonTableClient.JsonTableMetadata._parse_col_type(col_type_str)
         constraints = self._parse_col_constraints(add_col.constraints)
+        if (not constraints['jcol_nullable']) and constraints['jcol_has_default'] and (constraints['jcol_default'] is None):
+            raise ValueError(f"Invalid default value for '{new_col_name}'")
         if constraints['jcol_has_default'] and (constraints['jcol_default'] is not None):
             model(val=self._calc_default_value(constraints['jcol_default']))
         cur_col_id = max([meta['jcol_id'] for meta in self.jmetadata.meta_cache[jtable_name]]) + 1
@@ -475,7 +483,7 @@ class ObVecJsonTableClient(ObVecClient):
         jtable_name: str,
         modify_col: Expression,
     ):
-        logger.info("HANDLE ALTER MODIFY COLUMN")
+        logger.debug("HANDLE ALTER MODIFY COLUMN")
         col_def = modify_col.this
         col_name = col_def.this.this
         if not self._check_col_exists(jtable_name, col_name):
@@ -484,6 +492,8 @@ class ObVecJsonTableClient(ObVecClient):
         col_type_str = self._parse_col_datatype(col_def.kind)
         model = ObVecJsonTableClient.JsonTableMetadata._parse_col_type(col_type_str)
         constraints = self._parse_col_constraints(col_def.constraints)
+        if (not constraints['jcol_nullable']) and constraints['jcol_has_default'] and (constraints['jcol_default'] is None):
+            raise ValueError(f"Invalid default value for '{col_name}'")
         if constraints['jcol_has_default'] and (constraints['jcol_default'] is not None):
             model(val=self._calc_default_value(constraints['jcol_default']))
 
@@ -567,8 +577,7 @@ class ObVecJsonTableClient(ObVecClient):
         if not self._check_table_exists(jtable_name):
             raise ValueError(f"Table {jtable_name} does not exists")
         
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
+        session = self.session()
         for action in ast.actions:
             if isinstance(action, ChangeColumn):
                 self._handle_alter_jtable_change_column(
@@ -637,8 +646,7 @@ class ObVecJsonTableClient(ObVecClient):
         else:
             raise ValueError(f"Invalid ast type {ast.this}")
 
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
+        session = self.session()
         for tuple in ast.expression.expressions:
             expr_list = tuple.expressions
             if len(expr_list) != len(insert_col_names):
@@ -654,7 +662,7 @@ class ObVecJsonTableClient(ObVecClient):
                     datum = model(val=self._calc_default_value(cols[col_name]['jcol_default']))
                     kv[col_name] = val2json(datum.val)
 
-            logger.info(f"================= [INSERT] =============== {kv}")
+            logger.debug(f"================= [INSERT] =============== {kv}")
 
             session.add(ObVecJsonTableClient.JsonTableDataTBL(
                 user_id = self.user_id,
@@ -697,7 +705,7 @@ class ObVecJsonTableClient(ObVecClient):
         else:
             update_sql = f"UPDATE {JSON_TABLE_DATA_TABLE_NAME} SET jdata = JSON_REPLACE(jdata, {', '.join(path_settings)})"
 
-        logger.info(f"===================== do update: {update_sql}")
+        logger.debug(f"===================== do update: {update_sql}")
         self.perform_raw_text_sql(update_sql)
 
     def _handle_jtable_dml_delete(self, ast: Expression):
@@ -719,7 +727,7 @@ class ObVecJsonTableClient(ObVecClient):
         else:
             delete_sql = f"DELETE FROM {JSON_TABLE_DATA_TABLE_NAME}"
 
-        logger.info(f"===================== do delete: {delete_sql}")
+        logger.debug(f"===================== do delete: {delete_sql}")
         self.perform_raw_text_sql(delete_sql)
 
     def _get_full_datatype(self, jdata_type: str):
@@ -738,11 +746,31 @@ class ObVecJsonTableClient(ObVecClient):
 
         col_meta = self.jmetadata.meta_cache[table_name]
         json_table_meta_str = []
+        all_jcol_names = []
         for meta in col_meta:
             json_table_meta_str.append(
                 f"{meta['jcol_name']} {self._get_full_datatype(meta['jcol_type'])} "
                 f"PATH '$.{meta['jcol_name']}'"
             )
+            all_jcol_names.append(meta['jcol_name'])
+        
+        need_replace_select_exprs = False
+        new_select_exprs = []
+        for select_expr in ast.args['expressions']:
+            if isinstance(select_expr, exp.Star):
+                need_replace_select_exprs = True
+                for jcol_name in all_jcol_names:
+                    col_expr = exp.Column()
+                    identifier = exp.Identifier()
+                    identifier.args['this'] = jcol_name
+                    identifier.args['quoted'] = False
+                    col_expr.args['this'] = identifier
+                    new_select_exprs.append(col_expr)
+            else:
+                new_select_exprs.append(select_expr)
+        if need_replace_select_exprs:
+            ast.args['expressions'] = new_select_exprs
+        
         tmp_table_name = "__tmp"
         json_table_str = f"json_table(jdata, '$' COLUMNS ({', '.join(json_table_meta_str)})) {tmp_table_name}"
 
@@ -773,4 +801,5 @@ class ObVecJsonTableClient(ObVecClient):
             ast.args['where'] = where_clause
 
         select_sql = str(ast)
-        logger.info(f"===================== do select: {select_sql}")
+        logger.debug(f"===================== do select: {select_sql}")
+        return self.perform_raw_text_sql(select_sql)
