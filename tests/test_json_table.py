@@ -312,3 +312,55 @@ class ObVecJsonTableTest(unittest.TestCase):
                 (Decimal('20.00'), 'updated', 58, datetime.datetime(2024, 12, 30, 6, 56), datetime.datetime(2024, 12, 30, 2, 44, 17))
             ]
         )
+
+    def test_col_name_conflict(self):
+        self.root_client._reset()
+        self.client.refresh_metadata()
+        keys_to_check = ['jcol_id', 'jcol_name', 'jcol_type', 'jcol_nullable', 'jcol_has_default', 'jcol_default']
+        self.client.perform_json_table_sql(
+            "create table `t1` (user_id int DEFAULT NULL, jtable_name varchar(30) DEFAULT 'jtable');"
+        )
+        self.assertEqual(sub_dict(self.client.jmetadata.meta_cache['t1'], keys_to_check), 
+            [
+                {'jcol_id': 16, 'jcol_name': 'user_id', 'jcol_type': 'INT', 'jcol_nullable': True, 'jcol_has_default': True, 'jcol_default': None},
+                {'jcol_id': 17, 'jcol_name': 'jtable_name', 'jcol_type': 'VARCHAR(30)', 'jcol_nullable': True, 'jcol_has_default': True, 'jcol_default': "'jtable'"},
+            ]
+        )
+
+        self.client.perform_json_table_sql(
+            "insert into t1 values (1, 'alice'), (2, 'bob')"
+        )
+        res = self.client.perform_json_table_sql(
+            "select * from t1"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [
+                (1, 'alice'),
+                (2, 'bob'),
+            ]
+        )
+
+        res = self.client.perform_json_table_sql(
+            "select * from t1 where user_id > 1"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [
+                (2, 'bob'),
+            ]
+        )
+
+        res = self.client.perform_json_table_sql(
+            "update t1 set user_id=15 where jtable_name='alice'"
+        )
+        res = self.client.perform_json_table_sql(
+            "select * from t1"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [
+                (15, 'alice'),
+                (2, 'bob'),
+            ]
+        )

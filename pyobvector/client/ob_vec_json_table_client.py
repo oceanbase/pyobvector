@@ -697,13 +697,15 @@ class ObVecJsonTableClient(ObVecClient):
                 where_col_name = column.this.this
                 if not self._check_col_exists(table_name, where_col_name):
                     raise ValueError(f"Column {where_col_name} does not exists")
-                column.parent.args['this'] = parse_one(f"JSON_VALUE(jdata, '$.{where_col_name}')")
-            where_clause = f"user_id = {self.user_id} AND jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+                column.parent.args['this'] = parse_one(
+                    f"JSON_VALUE({JSON_TABLE_DATA_TABLE_NAME}.jdata, '$.{where_col_name}')"
+                )
+            where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = {self.user_id} AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
         
         if where_clause:
-            update_sql = f"UPDATE {JSON_TABLE_DATA_TABLE_NAME} SET jdata = JSON_REPLACE(jdata, {', '.join(path_settings)}) WHERE {where_clause}"
+            update_sql = f"UPDATE {JSON_TABLE_DATA_TABLE_NAME} SET jdata = JSON_REPLACE({JSON_TABLE_DATA_TABLE_NAME}.jdata, {', '.join(path_settings)}) WHERE {where_clause}"
         else:
-            update_sql = f"UPDATE {JSON_TABLE_DATA_TABLE_NAME} SET jdata = JSON_REPLACE(jdata, {', '.join(path_settings)})"
+            update_sql = f"UPDATE {JSON_TABLE_DATA_TABLE_NAME} SET jdata = JSON_REPLACE({JSON_TABLE_DATA_TABLE_NAME}.jdata, {', '.join(path_settings)})"
 
         logger.debug(f"===================== do update: {update_sql}")
         self.perform_raw_text_sql(update_sql)
@@ -719,8 +721,10 @@ class ObVecJsonTableClient(ObVecClient):
                 where_col_name = column.this.this
                 if not self._check_col_exists(table_name, where_col_name):
                     raise ValueError(f"Column {where_col_name} does not exists")
-                column.parent.args['this'] = parse_one(f"JSON_VALUE(jdata, '$.{where_col_name}')")
-            where_clause = f"user_id = {self.user_id} AND jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+                column.parent.args['this'] = parse_one(
+                    f"JSON_VALUE({JSON_TABLE_DATA_TABLE_NAME}.jdata, '$.{where_col_name}')"
+                )
+            where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = {self.user_id} AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
         
         if where_clause:
             delete_sql = f"DELETE FROM {JSON_TABLE_DATA_TABLE_NAME} WHERE {where_clause}"
@@ -772,7 +776,7 @@ class ObVecJsonTableClient(ObVecClient):
             ast.args['expressions'] = new_select_exprs
         
         tmp_table_name = "__tmp"
-        json_table_str = f"json_table(jdata, '$' COLUMNS ({', '.join(json_table_meta_str)})) {tmp_table_name}"
+        json_table_str = f"json_table({JSON_TABLE_DATA_TABLE_NAME}.jdata, '$' COLUMNS ({', '.join(json_table_meta_str)})) {tmp_table_name}"
 
         for col in ast.find_all(exp.Column):
             if 'table' in col.args.keys():
@@ -790,7 +794,7 @@ class ObVecJsonTableClient(ObVecClient):
         else:
             ast.args['joins'] = [join_node]
 
-        extra_filter_str = f"user_id = {self.user_id} AND jtable_name = '{table_name}'"
+        extra_filter_str = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = {self.user_id} AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}'"
         if 'where' in ast.args.keys():
             filter_str = str(ast.args['where'].args['this'])
             new_filter_str = f"{extra_filter_str} AND ({filter_str})"
