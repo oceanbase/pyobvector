@@ -56,7 +56,7 @@ jobs:
         OCEANBASE_USER: 'root@test'
         OCEANBASE_PASS: ''
       run: |
-        docker exec ob433 obclient -h $OCEANBASE_HOST -P $OCEANBASE_PORT -u $OCEANBASE_USER -p$OCEANBASE_PASS -e "ALTER SYSTEM ob_vector_memory_limit_percentage = 30"
+        docker exec ob433 obclient -h $OCEANBASE_HOST -P $OCEANBASE_PORT -u $OCEANBASE_USER -p$OCEANBASE_PASS -e "ALTER SYSTEM ob_vector_memory_limit_percentage = 30; create user 'jtuser'@'%'; GRANT SELECT, INSERT, UPDATE, DELETE ON test.* TO 'jtuser'@'%'; FLUSH PRIVILEGES;"
 
     - name: Run tests
       run: |

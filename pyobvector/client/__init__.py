@@ -30,6 +30,7 @@ In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 """
 from .ob_vec_client import ObVecClient
 from .milvus_like_client import MilvusLikeClient
+from .ob_vec_json_table_client import ObVecJsonTableClient
 from .index_param import VecIndexType, IndexParam, IndexParams
 from .schema_type import DataType
 from .collection_schema import FieldSchema, CollectionSchema
@@ -38,6 +39,7 @@ from .partitions import *
 __all__ = [
     "ObVecClient",
     "MilvusLikeClient",
+    "ObVecJsonTableClient",
     "VecIndexType",
     "IndexParam",
     "IndexParams",

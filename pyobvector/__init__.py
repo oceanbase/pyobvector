@@ -51,10 +51,12 @@ from .schema import (
     st_dwithin,
     st_astext,
 )
+from .json_table import OceanBase
 
 __all__ = [
     "ObVecClient",
     "MilvusLikeClient",
+    "ObVecJsonTableClient",
     "VecIndexType",
     "IndexParam",
     "IndexParams",
@@ -85,4 +87,5 @@ __all__ = [
     "st_distance",
     "st_dwithin",
     "st_astext",
+    "OceanBase",
 ]
