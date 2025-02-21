@@ -5,7 +5,10 @@ from typing import Union
 class VecIndexType(Enum):
     """Vector index algorithm type"""
     HNSW = 0
-    # IVFFLAT = 1
+    HNSW_SQ = 1
+    IVFFLAT = 2
+    IVFSQ = 3
+    IVFPQ = 4
 
 
 class IndexParam:
@@ -23,6 +26,11 @@ class IndexParam:
     HNSW_DEFAULT_EF_CONSTRUCTION = 200
     HNSW_DEFAULT_EF_SEARCH = 40
     OCEANBASE_DEFAULT_ALGO_LIB = 'vsag'
+    HNSW_ALGO_NAME = "hnsw"
+    HNSW_SQ_ALGO_NAME = "hnsw_sq"
+    IVFFLAT_ALGO_NAME = "ivf_flat"
+    IVFSQ_ALGO_NAME = "ivf_sq8"
+    IVFPQ_ALGO_NAME = "ivf_pq"
 
     def __init__(
         self, index_name: str, field_name: str, index_type: Union[VecIndexType, str], **kwargs
@@ -33,47 +41,89 @@ class IndexParam:
         self.index_type = self._get_vector_index_type_str()
         self.kwargs = kwargs
 
+    def is_index_type_hnsw_serial(self):
+        return self.index_type in [
+            IndexParam.HNSW_ALGO_NAME, IndexParam.HNSW_SQ_ALGO_NAME
+        ]
+    
+    def is_index_type_ivf_serial(self):
+        return self.index_type in [
+            IndexParam.IVFFLAT_ALGO_NAME,
+            IndexParam.IVFSQ_ALGO_NAME,
+            IndexParam.IVFPQ_ALGO_NAME,
+        ]
+    
+    def is_index_type_product_quantization(self):
+        return self.index_type in [
+            IndexParam.IVFPQ_ALGO_NAME,
+        ]
+
     def _get_vector_index_type_str(self):
         """Parse vector index type to string."""
         if isinstance(self.index_type, VecIndexType):
             if self.index_type == VecIndexType.HNSW:
-                return "hnsw"
-            # elif self.index_type == VecIndexType.IVFFLAT:
-            #     return "ivfflat"
+                return IndexParam.HNSW_ALGO_NAME
+            elif self.index_type == VecIndexType.HNSW_SQ:
+                return IndexParam.HNSW_SQ_ALGO_NAME
+            elif self.index_type == VecIndexType.IVFFLAT:
+                return IndexParam.IVFFLAT_ALGO_NAME
+            elif self.index_type == VecIndexType.IVFSQ:
+                return IndexParam.IVFSQ_ALGO_NAME
+            elif self.index_type == VecIndexType.IVFPQ:
+                return IndexParam.IVFPQ_ALGO_NAME
             raise ValueError(f"unsupported vector index type: {self.index_type}")
         assert isinstance(self.index_type, str)
-        if self.index_type.lower() == "hnsw":
-            return "hnsw"
-        raise ValueError(f"unsupported vector index type: {self.index_type}")
+        index_type = self.index_type.lower()
+        if index_type not in [
+            IndexParam.HNSW_ALGO_NAME,
+            IndexParam.HNSW_SQ_ALGO_NAME,
+            IndexParam.IVFFLAT_ALGO_NAME,
+            IndexParam.IVFSQ_ALGO_NAME,
+            IndexParam.IVFPQ_ALGO_NAME,
+        ]:
+            raise ValueError(f"unsupported vector index type: {self.index_type}")
+        return index_type
 
     def _parse_kwargs(self):
         ob_params = {}
+        # handle lib
+        if self.is_index_type_hnsw_serial():
+            ob_params['lib'] = 'vsag'
+        else:
+            ob_params['lib'] = 'OB'
         # handle metric_type
+        ob_params['distance'] = "l2"
         if 'metric_type' in self.kwargs:
             ob_params['distance'] = self.kwargs['metric_type']
-        elif self.index_type == "hnsw":
-            ob_params['distance'] = 'l2'
-        else:
-            raise ValueError(f"unsupported vector index type: {self.index_type}")
         # handle param
-        if 'params' in self.kwargs:
-            for k, v in self.kwargs['params'].items():
-                if k == 'M':
-                    ob_params['m'] = v
-                elif k == 'efConstruction':
-                    ob_params['ef_construction'] = v
-                elif k == 'efSearch':
-                    ob_params['ef_search'] = v
-                else:
-                    ob_params[k] = v
-        elif self.index_type == "hnsw":
-            ob_params['m'] = IndexParam.HNSW_DEFAULT_M
-            ob_params['ef_construction'] = IndexParam.HNSW_DEFAULT_EF_CONSTRUCTION
-            ob_params['ef_search'] = IndexParam.HNSW_DEFAULT_EF_SEARCH
-        else:
-            raise ValueError(f"unsupported vector index type: {self.index_type}")
-        # Append OceanBase parameters.
-        ob_params['lib'] = IndexParam.OCEANBASE_DEFAULT_ALGO_LIB
+        if self.is_index_type_ivf_serial():
+            if (self.is_index_type_product_quantization() and
+                'params' not in self.kwargs):
+                raise ValueError('params must be configured for IVF index type')
+            
+            if 'params' not in self.kwargs:
+                params = {}
+            else:
+                params = self.kwargs['params']
+            
+            if self.is_index_type_product_quantization():
+                if 'm' not in params:
+                    raise ValueError('m must be configured for IVFSQ or IVFPQ')
+                ob_params['m'] = params['m']
+            if 'nlist' in params:
+                ob_params['nlist'] = params['nlist']
+            if 'samples_per_nlist' in params:
+                ob_params['samples_per_nlist'] = params['samples_per_nlist']
+
+        if self.is_index_type_hnsw_serial():
+            if 'params' in self.kwargs:
+                params = self.kwargs['params']
+                if 'M' in params:
+                    ob_params['m'] = params['M']
+                if 'efConstruction' in params:
+                    ob_params['ef_construction'] = params['efConstruction']
+                if 'efSearch' in params:
+                    ob_params['ef_search'] = params['efSearch']
         return ob_params
 
     def param_str(self):

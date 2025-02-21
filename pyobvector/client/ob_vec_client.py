@@ -21,6 +21,7 @@ from sqlalchemy.dialects import registry
 import sqlalchemy.sql.functions as func_mod
 import numpy as np
 from .index_param import IndexParams, IndexParam
+from .fts_index_param import FtsIndexParam
 from ..schema import (
     ObTable,
     VectorIndex,
@@ -33,6 +34,7 @@ from ..schema import (
     st_dwithin,
     st_astext,
     ReplaceStmt,
+    FtsIndex,
 )
 from ..util import ObVersion
 from .partitions import *
@@ -158,6 +160,7 @@ class ObVecClient:
         columns: List[Column],
         indexes: Optional[List[Index]] = None,
         vidxs: Optional[IndexParams] = None,
+        fts_idxs: Optional[List[FtsIndexParam]] = None,
         partitions: Optional[ObPartition] = None,
     ):
         """Create table with optional index_params.
@@ -202,6 +205,16 @@ class ObVecClient:
                             params=vidx.param_str(),
                         )
                         vidx.create(self.engine, checkfirst=True)
+                # create fts indexes
+                if fts_idxs is not None:
+                    for fts_idx in fts_idxs:
+                        idx_cols = [table.c[field_name] for field_name in fts_idx.field_names]
+                        fts_idx = FtsIndex(
+                            fts_idx.index_name,
+                            fts_idx.param_str(),
+                            *idx_cols,
+                        )
+                        fts_idx.create(self.engine, checkfirst=True)
 
     def create_index(
         self,
@@ -253,6 +266,28 @@ class ObVecClient:
                     params=vidx_param.param_str(),
                 )
                 vidx.create(self.engine, checkfirst=True)
+
+    def create_fts_idx_with_fts_index_param(
+        self,
+        table_name: str,
+        fts_idx_param: FtsIndexParam,
+    ):
+        """Create fts index with fts index parameter.
+        
+        Args:
+            table_name (string) : table name
+            fts_idx_param (FtsIndexParam) : fts index parameter
+        """
+        table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
+        with self.engine.connect() as conn:
+            with conn.begin():
+                idx_cols = [table.c[field_name] for field_name in fts_idx_param.field_names]
+                fts_idx = FtsIndex(
+                    fts_idx_param.index_name,
+                    fts_idx_param.param_str(),
+                    *idx_cols,
+                )
+                fts_idx.create(self.engine, checkfirst=True)
 
     def drop_table_if_exist(self, table_name: str):
         """Drop table if exists."""
@@ -556,6 +591,7 @@ class ObVecClient:
         extra_output_cols: Optional[List] = None,
         where_clause=None,
         partition_names: Optional[List[str]] = None,
+        idx_name_hint: Optional[List[str]] = None,
         **kwargs,
     ): # pylint: disable=unused-argument
         """perform ann search.
@@ -569,6 +605,8 @@ class ObVecClient:
             topk (int) : top K
             output_column_names (Optional[List[str]]) : output fields
             where_clause : do ann search with filter
+            idx_name_hint : post-filtering enabled if vector index name is specified
+                            Or pre-filtering enabled
         """
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
 
@@ -587,6 +625,13 @@ class ObVecClient:
                     "[" + ",".join([str(np.float32(v)) for v in vec_data]) + "]",
                 )
             )
+        # if idx_name_hint is not None:
+        #     stmt = select(*columns).with_hint(
+        #         table,
+        #         f"index(%(name)s {idx_name_hint})",
+        #         "oracle"
+        #     )
+        # else:
         stmt = select(*columns)
 
         if where_clause is not None:
@@ -607,6 +652,10 @@ class ObVecClient:
         )
         with self.engine.connect() as conn:
             with conn.begin():
+                if idx_name_hint is not None:
+                    idx = stmt_str.find("SELECT ")
+                    stmt_str = f"SELECT /*+ index({table_name} {idx_name_hint}) */ " + stmt_str[idx + len("SELECT "):]
+
                 if partition_names is None:
                     return conn.execute(text(stmt_str))
                 stmt_str = self._insert_partition_hint_for_query_sql(

@@ -78,7 +78,7 @@ class ObVecJsonTableClient(ObVecClient):
                 if col_type == 'DECIMAL':
                     factory = JsonTableDecimalFactory(10, 0)
                 else:
-                    decimal_pattern = r'DECIMAL\((\d+),\s*(\d+)\)'
+                    decimal_pattern = r'DECIMAL\s*\((\d+),\s*(\d+)\)'
                     decimal_matches = re.findall(decimal_pattern, col_type)
                     x, y = decimal_matches[0]
                     factory = JsonTableDecimalFactory(int(x), int(y))

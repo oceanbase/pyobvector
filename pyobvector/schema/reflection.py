@@ -33,7 +33,7 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
 
         self._re_key = _re_compile(
             r"  "
-            r"(?:(SPATIAL|VECTOR|(?P<type>\S+)) )?KEY"
+            r"(?:(FULLTEXT|SPATIAL|VECTOR|(?P<type>\S+)) )?KEY"
             # r"(?:(?P<type>\S+) )?KEY"
             r"(?: +{iq}(?P<name>(?:{esc_fq}|[^{fq}])+){fq})?"
             r"(?: +USING +(?P<using_pre>\S+))?"
@@ -69,10 +69,12 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
         ret = super()._parse_constraints(line)
         if ret:
             tp, spec = ret
+
+            if tp is None:
+                return ret
             if tp == "partition":
                 # do not handle partition
                 return ret
-            # logger.info(f"{tp} {spec}")
             if tp == "fk_constraint":
                 if len(spec["table"]) == 2 and spec["table"][0] == self.default_schema:
                     spec["table"] = spec["table"][1:]
