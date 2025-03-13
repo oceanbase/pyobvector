@@ -516,6 +516,7 @@ class ObVecClient:
         where_clause = None,
         output_column_name: Optional[List[str]] = None,
         partition_names: Optional[List[str]] = None,
+        n_limits: Optional[int] = None,
     ):
         """get records with specified primary field `ids`.
 
@@ -549,6 +550,9 @@ class ObVecClient:
             stmt = stmt.where(*where_clause)
         elif where_in_clause is not None and where_clause is not None:
             stmt = stmt.where(and_(where_in_clause, *where_clause))
+        
+        if n_limits is not None:
+            stmt = stmt.limit(n_limits)
 
         with self.engine.connect() as conn:
             with conn.begin():

@@ -86,13 +86,13 @@ class ObFtsIndexTest(unittest.TestCase):
             ids=None,
             where_clause=[MatchAgaint('like', 'doc'), text("id > 4")],
             output_column_name=["id", "doc"],
+            n_limits=1,
         )
         self.assertEqual(
             set(res.fetchall()),
             set(
                 [
                     (5, 'i like coding'),
-                    (6, 'i like my company'),
                 ]
             )
         )
