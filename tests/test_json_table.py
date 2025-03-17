@@ -364,3 +364,23 @@ class ObVecJsonTableTest(unittest.TestCase):
                 (2, 'bob'),
             ]
         )
+
+    def test_timestamp_datatype(self):
+        self.root_client._reset()
+        self.client.refresh_metadata()
+        self.client.perform_json_table_sql(
+            "create table `t1` (c1 int DEFAULT NULL, c2 TIMESTAMP);"
+        )
+
+        self.client.perform_json_table_sql(
+            "insert into t1 values (1, CURRENT_DATE - INTERVAL '1' MONTH);"
+        )
+
+        self.client.perform_json_table_sql(
+            "select * from t1"
+        )
+
+    def test_online_cases(self):
+        self.root_client._reset()
+        self.client.refresh_metadata()
+        
