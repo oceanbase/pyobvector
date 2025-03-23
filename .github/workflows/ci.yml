@@ -37,7 +37,7 @@ jobs:
       run: |
         timeout=300
         while [ $timeout -gt 0 ]; do
-          if docker logs ob433 | grep -q 'boot success!'; then
+          if docker logs ob435 | grep -q 'boot success!'; then
             echo "Container is ready."
             break
           fi
@@ -56,7 +56,7 @@ jobs:
         OCEANBASE_USER: 'root@test'
         OCEANBASE_PASS: ''
       run: |
-        docker exec ob433 obclient -h $OCEANBASE_HOST -P $OCEANBASE_PORT -u $OCEANBASE_USER -p$OCEANBASE_PASS -e "ALTER SYSTEM ob_vector_memory_limit_percentage = 30; create user 'jtuser'@'%'; GRANT SELECT, INSERT, UPDATE, DELETE ON test.* TO 'jtuser'@'%'; FLUSH PRIVILEGES;"
+        docker exec ob435 obclient -h $OCEANBASE_HOST -P $OCEANBASE_PORT -u $OCEANBASE_USER -p$OCEANBASE_PASS -e "ALTER SYSTEM ob_vector_memory_limit_percentage = 30; create user 'jtuser'@'%'; GRANT SELECT, INSERT, UPDATE, DELETE ON test.* TO 'jtuser'@'%'; FLUSH PRIVILEGES;"
 
     - name: Run tests
       run: |
