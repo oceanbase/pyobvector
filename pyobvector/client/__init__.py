@@ -27,6 +27,8 @@ In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 * ObSubHashPartition    Specify Hash subpartition info
 * ObKeyPartition        Specify Key partition info
 * ObSubKeyPartition     Specify Key subpartition info
+* FtsParser             Text Parser Type for Full Text Search
+* FtsIndexParam         Full Text Search index parameter
 """
 from .ob_vec_client import ObVecClient
 from .milvus_like_client import MilvusLikeClient
@@ -35,6 +37,7 @@ from .index_param import VecIndexType, IndexParam, IndexParams
 from .schema_type import DataType
 from .collection_schema import FieldSchema, CollectionSchema
 from .partitions import *
+from .fts_index_param import FtsParser, FtsIndexParam
 
 __all__ = [
     "ObVecClient",
@@ -57,4 +60,6 @@ __all__ = [
     "ObSubHashPartition",
     "ObKeyPartition",
     "ObSubKeyPartition",
+    "FtsParser",
+    "FtsIndexParam",
 ]

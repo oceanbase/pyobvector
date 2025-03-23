@@ -15,6 +15,7 @@ In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 * DataType              Specify field type in collection schema for MilvusLikeClient
 * VECTOR                An extended data type in SQLAlchemy for ObVecClient
 * VectorIndex           An extended index type in SQLAlchemy for ObVecClient
+* FtsIndex              Full Text Search Index
 * FieldSchema           Clas to define field schema in collection for MilvusLikeClient
 * CollectionSchema      Class to define collection schema for MilvusLikeClient
 * PartType              Specify partition type of table or collection 
@@ -34,6 +35,9 @@ In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 * st_distance           GIS function: calculate distance between Points
 * st_dwithin            GIS function: check if the distance between two points
 * st_astext             GIS function: return a Point in human-readable format
+* FtsParser             Text Parser Type for Full Text Search
+* FtsIndexParam         Full Text Search index parameter
+* MatchAgainst          Full Text Search clause
 """
 from .client import *
 from .schema import (
@@ -50,6 +54,8 @@ from .schema import (
     st_distance,
     st_dwithin,
     st_astext,
+    FtsIndex,
+    MatchAgaint,
 )
 from .json_table import OceanBase
 
@@ -64,6 +70,7 @@ __all__ = [
     "VECTOR",
     "POINT",
     "VectorIndex",
+    "FtsIndex",
     "OceanBaseDialect",
     "AsyncOceanBaseDialect",
     "FieldSchema",
@@ -88,4 +95,7 @@ __all__ = [
     "st_dwithin",
     "st_astext",
     "OceanBase",
+    "FtsParser",
+    "FtsIndexParam",
+    "MatchAgaint",
 ]

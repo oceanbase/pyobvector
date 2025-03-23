@@ -119,6 +119,36 @@ class ObVecClientTest(unittest.TestCase):
     def test_set_variable(self):
         self.client.set_ob_hnsw_ef_search(100)
         self.assertEqual(self.client.get_ob_hnsw_ef_search(), 100)
+    
+    def test_create_index_dup(self):
+        test_collection_name = "ob_create_index_dup_test"
+        self.client.drop_table_if_exist(test_collection_name)
+
+        cols = [
+            Column("id", String(64), primary_key=True, autoincrement=False),
+            Column("embedding", VECTOR(3)),
+            Column("meta", JSON),
+        ]
+        self.client.create_table(
+            test_collection_name, columns=cols
+        )
+
+        # create vector index
+        self.client.create_index(
+            test_collection_name,
+            is_vec_index=True,
+            index_name="vidx",
+            column_names=["embedding"],
+            vidx_params="distance=l2, type=hnsw, lib=vsag",
+        )
+
+        self.client.create_index(
+            test_collection_name,
+            is_vec_index=True,
+            index_name="vidx",
+            column_names=["embedding"],
+            vidx_params="distance=l2, type=hnsw, lib=vsag",
+        )
 
 if __name__ == "__main__":
     unittest.main()

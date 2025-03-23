@@ -14,6 +14,9 @@
 * st_dwithin        GIS function: check if the distance between two points
 * st_astext         GIS function: return a Point in human-readable format
 * ReplaceStmt       Replace into statement based on the extension of SQLAlchemy.Insert
+* FtsIndex          Full Text Search Index
+* CreateFtsIndex    Full Text Search Index Creation statement clause
+* MatchAgainst      Full Text Search clause
 """
 from .vector import VECTOR
 from .geo_srid_point import POINT
@@ -23,6 +26,8 @@ from .vec_dist_func import l2_distance, cosine_distance, inner_product, negative
 from .gis_func import ST_GeomFromText, st_distance, st_dwithin, st_astext
 from .replace_stmt import ReplaceStmt
 from .dialect import OceanBaseDialect, AsyncOceanBaseDialect
+from .full_text_index import FtsIndex, CreateFtsIndex
+from .match_against_func import MatchAgaint
 
 __all__ = [
     "VECTOR",
@@ -41,4 +46,7 @@ __all__ = [
     "ReplaceStmt",
     "OceanBaseDialect",
     "AsyncOceanBaseDialect",
+    "FtsIndex",
+    "CreateFtsIndex",
+    "MatchAgaint",
 ]
