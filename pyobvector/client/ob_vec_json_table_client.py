@@ -6,7 +6,9 @@ from typing import Dict, List, Optional, Any
 from sqlalchemy import Column, Integer, String, JSON, Engine, select, text, func, CursorResult
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from sqlglot import parse_one, exp, Expression
+from sqlglot import parse_one, exp, Expression, to_identifier
+from sqlglot.expressions import Concat
+
 
 from .ob_vec_client import ObVecClient
 from ..json_table import (
@@ -35,7 +37,7 @@ class ObVecJsonTableClient(ObVecClient):
     class JsonTableMetaTBL(Base):
         __tablename__ = JSON_TABLE_META_TABLE_NAME
         
-        user_id = Column(Integer, primary_key=True)
+        user_id = Column(String(128), primary_key=True, autoincrement=False)
         jtable_name = Column(String(512), primary_key=True)
         jcol_id = Column(Integer, primary_key=True)
         jcol_name = Column(String(512), primary_key=True)
@@ -47,13 +49,13 @@ class ObVecJsonTableClient(ObVecClient):
     class JsonTableDataTBL(Base):
         __tablename__ = JSON_TABLE_DATA_TABLE_NAME
 
-        user_id = Column(Integer, primary_key=True)
+        user_id = Column(String(128), primary_key=True, autoincrement=False)
         jtable_name = Column(String(512), primary_key=True)
         jdata_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
         jdata = Column(JSON)
 
     class JsonTableMetadata:
-        def __init__(self, user_id: int):
+        def __init__(self, user_id: str):
             self.user_id = user_id
             self.meta_cache: Dict[str, List] = {}
 
@@ -119,7 +121,7 @@ class ObVecJsonTableClient(ObVecClient):
 
     def __init__(
         self,
-        user_id: int,
+        user_id: str,
         uri: str = "127.0.0.1:2881",
         user: str = "root@test",
         password: str = "",
@@ -238,7 +240,9 @@ class ObVecJsonTableClient(ObVecClient):
                 elif isinstance(cons.kind, exp.NotNullColumnConstraint):
                     col_nullable = False
                 else:
-                    raise ValueError(f"{cons.kind} constriaint is not supported.")
+                    pass
+                    # raise ValueError(f"{cons.kind} constriaint is not supported.")
+                    # TODO support json index
             
             if col_has_default and (col_default_val is not None):
                 # check default value is valid
@@ -689,6 +693,20 @@ class ObVecJsonTableClient(ObVecClient):
             if not self._check_col_exists(table_name, col_name):
                 raise ValueError(f"Column {col_name} does not exists")
             col_expr = expr.expression
+            new_node = parse_one(f"JSON_VALUE({JSON_TABLE_DATA_TABLE_NAME}.jdata, '$.{col_name}')")
+            for column in col_expr.find_all(exp.Column):
+                parent_node = column.parent
+                if isinstance(parent_node.args[column.arg_key], list):
+                    new_expr_list = []
+                    for node in parent_node.args[column.arg_key]:
+                        if isinstance(node, exp.Column):
+                            new_expr_list.append(new_node)
+                        else:
+                            new_expr_list.append(node)
+                    parent_node.args[column.arg_key] = new_expr_list
+                elif isinstance(parent_node.args[column.arg_key], exp.Column):
+                    parent_node.args[column.arg_key] = new_node
+            logger.info(str(col_expr))
             path_settings.append(f"'$.{col_name}', {str(col_expr)}")
 
         where_clause = None        
@@ -700,7 +718,7 @@ class ObVecJsonTableClient(ObVecClient):
                 column.parent.args['this'] = parse_one(
                     f"JSON_VALUE({JSON_TABLE_DATA_TABLE_NAME}.jdata, '$.{where_col_name}')"
                 )
-            where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = {self.user_id} AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+            where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
         
         if where_clause:
             update_sql = f"UPDATE {JSON_TABLE_DATA_TABLE_NAME} SET jdata = JSON_REPLACE({JSON_TABLE_DATA_TABLE_NAME}.jdata, {', '.join(path_settings)}) WHERE {where_clause}"
@@ -724,7 +742,7 @@ class ObVecJsonTableClient(ObVecClient):
                 column.parent.args['this'] = parse_one(
                     f"JSON_VALUE({JSON_TABLE_DATA_TABLE_NAME}.jdata, '$.{where_col_name}')"
                 )
-            where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = {self.user_id} AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+            where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
         
         if where_clause:
             delete_sql = f"DELETE FROM {JSON_TABLE_DATA_TABLE_NAME} WHERE {where_clause}"
@@ -746,7 +764,7 @@ class ObVecJsonTableClient(ObVecClient):
         if not self._check_table_exists(table_name):
             raise ValueError(f"Table {table_name} does not exists")
         
-        ast.args['from'].args['this'].args['this'].args['this'] = JSON_TABLE_DATA_TABLE_NAME
+        ast.args['from'].args['this'].args['this'] = to_identifier(name=JSON_TABLE_DATA_TABLE_NAME, quoted=False)
 
         col_meta = self.jmetadata.meta_cache[table_name]
         json_table_meta_str = []
@@ -794,7 +812,7 @@ class ObVecJsonTableClient(ObVecClient):
         else:
             ast.args['joins'] = [join_node]
 
-        extra_filter_str = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = {self.user_id} AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}'"
+        extra_filter_str = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}'"
         if 'where' in ast.args.keys():
             filter_str = str(ast.args['where'].args['this'])
             new_filter_str = f"{extra_filter_str} AND ({filter_str})"

@@ -24,8 +24,8 @@ def get_all_rows(res):
 
 class ObVecJsonTableTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.root_client = ObVecJsonTableClient(user_id=0)
-        self.client = ObVecJsonTableClient(user_id=1, user="jtuser@test")
+        self.root_client = ObVecJsonTableClient(user_id='0')
+        self.client = ObVecJsonTableClient(user_id='e5a69db04c5ea54adf324907d4b8f364', user="jtuser@test")
     
     def test_create_and_alter_jtable(self):
         self.root_client._reset()
@@ -34,7 +34,7 @@ class ObVecJsonTableTest(unittest.TestCase):
         self.client.perform_json_table_sql(
             "create table `t2` (c1 int NOT NULL DEFAULT 10, c2 varchar(30) DEFAULT 'ca', c3 varchar not null, c4 decimal(10, 2));"
         )
-        tmp_client = ObVecJsonTableClient(user_id=1)
+        tmp_client = ObVecJsonTableClient(user_id='e5a69db04c5ea54adf324907d4b8f364')
         self.assertEqual(sub_dict(tmp_client.jmetadata.meta_cache['t2'], keys_to_check), 
             [
                 {'jcol_id': 16, 'jcol_name': 'c1', 'jcol_type': 'INT', 'jcol_nullable': False, 'jcol_has_default': True, 'jcol_default': '10'}, 
@@ -383,4 +383,82 @@ class ObVecJsonTableTest(unittest.TestCase):
     def test_online_cases(self):
         self.root_client._reset()
         self.client.refresh_metadata()
-        
+        keys_to_check = ['jcol_id', 'jcol_name', 'jcol_type', 'jcol_nullable', 'jcol_has_default', 'jcol_default']
+        self.client.perform_json_table_sql(
+            "CREATE TABLE `table_unit_test`(id INT, field0 VARCHAR(1024), field1 INT, field2 DECIMAL(10,2), field3 timestamp NOT NULL default CURRENT_TIMESTAMP, field4 varchar(1024));"
+        )
+        logger.info(sub_dict(self.client.jmetadata.meta_cache['table_unit_test'], keys_to_check))
+        self.assertEqual(sub_dict(self.client.jmetadata.meta_cache['table_unit_test'], keys_to_check), 
+            [
+                {'jcol_id': 16, 'jcol_name': 'id', 'jcol_type': 'INT', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+                {'jcol_id': 17, 'jcol_name': 'field0', 'jcol_type': 'VARCHAR(1024)', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+                {'jcol_id': 18, 'jcol_name': 'field1', 'jcol_type': 'INT', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+                {'jcol_id': 19, 'jcol_name': 'field2', 'jcol_type': 'DECIMAL(10,2)', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+                {'jcol_id': 20, 'jcol_name': 'field3', 'jcol_type': 'TIMESTAMP', 'jcol_nullable': False, 'jcol_has_default': True, 'jcol_default': 'CURRENT_TIMESTAMP()'},
+                {'jcol_id': 21, 'jcol_name': 'field4', 'jcol_type': 'VARCHAR(1024)', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+            ]
+        )
+        self.client.perform_json_table_sql(
+            "INSERT INTO `table_unit_test` (id, field0, field1, field2, field4) VALUES (1, '汽车保养', 1, 1000.00, '4S 店')"
+        )
+        self.client.perform_json_table_sql(
+            "INSERT INTO `table_unit_test` (id, field0, field1, field2, field3, field4) VALUES (2, '奶茶', 2, 15.00, CURRENT_TIMESTAMP(), '商场'), (3, '书', 2, 40.00, NOW() - INTERVAL '1' DAY, '商场'), (4, '手机', 2, 6000.00, '2025-03-09', '商场')"
+        )
+
+        res = self.client.perform_json_table_sql(
+            "SELECT field0 AS 消费内容, field1 AS 消费类型, field2 AS 消费金额, field4 AS 消费地点 FROM `table_unit_test` LIMIT 2"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [
+                ('汽车保养', 1, Decimal('1000.00'), '4S 店'),
+                ('奶茶', 2, Decimal('15.00'), '商场')
+            ]
+        )
+
+        res = self.client.perform_json_table_sql(
+            "SELECT field2 FROM `table_unit_test` WHERE field0 like '%汽车%' AND field4 like '%店%' ORDER BY field2 DESC LIMIT 2"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(Decimal('1000.00'),)]
+        )
+
+        res = self.client.perform_json_table_sql(
+            "SELECT field0, field1, field2 FROM `table_unit_test` WHERE DATE(field3)='2025-03-09' ORDER BY field2 DESC LIMIT 2"
+        )
+        # logger.info(get_all_rows(res))
+        self.assertEqual(
+            get_all_rows(res),
+            [('手机', 2, Decimal('6000.00'))]
+        )
+
+        res = self.client.perform_json_table_sql(
+            "SELECT field0, field1, field2, field3 FROM `table_unit_test` WHERE field4 like '%商场%' AND field3 <= CAST('2025-03-10' AS DATE) LIMIT 20"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [('手机', 2, Decimal('6000.00'), datetime.datetime(2025, 3, 9, 0, 0))]
+        )
+
+        self.client.perform_json_table_sql(
+            "UPDATE `table_unit_test` SET field3 = '2025-03-14' WHERE field0 = '汽车保养'"
+        )
+        res = self.client.perform_json_table_sql(
+            "SELECT field0, field1, field2, field3 FROM `table_unit_test` WHERE DATE(field3) = '2025-03-14' AND field0 = '汽车保养'"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [('汽车保养', 1, Decimal('1000.00'), datetime.datetime(2025, 3, 14, 0, 0))]
+        )
+
+        self.client.perform_json_table_sql(
+            "UPDATE `table_unit_test` SET field0 = CONCAT(field0, '代办') WHERE DATE(field3) = '2025-03-14'"
+        )
+        res = self.client.perform_json_table_sql(
+            "SELECT field0, field1, field2, field3 FROM `table_unit_test` WHERE DATE(field3) = '2025-03-14'"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [('汽车保养代办', 1, Decimal('1000.00'), datetime.datetime(2025, 3, 14, 0, 0))]
+        )
