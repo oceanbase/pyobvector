@@ -27,7 +27,7 @@ from .gis_func import ST_GeomFromText, st_distance, st_dwithin, st_astext
 from .replace_stmt import ReplaceStmt
 from .dialect import OceanBaseDialect, AsyncOceanBaseDialect
 from .full_text_index import FtsIndex, CreateFtsIndex
-from .match_against_func import MatchAgaint
+from .match_against_func import MatchAgainst
 
 __all__ = [
     "VECTOR",
@@ -48,5 +48,5 @@ __all__ = [
     "AsyncOceanBaseDialect",
     "FtsIndex",
     "CreateFtsIndex",
-    "MatchAgaint",
+    "MatchAgainst",
 ]

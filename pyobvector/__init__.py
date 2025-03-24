@@ -55,7 +55,7 @@ from .schema import (
     st_dwithin,
     st_astext,
     FtsIndex,
-    MatchAgaint,
+    MatchAgainst,
 )
 from .json_table import OceanBase
 
@@ -97,5 +97,5 @@ __all__ = [
     "OceanBase",
     "FtsParser",
     "FtsIndexParam",
-    "MatchAgaint",
+    "MatchAgainst",
 ]

@@ -232,7 +232,7 @@ class ObVecMoreAlgorithmTest(unittest.TestCase):
         #     with_dist=True,
         #     topk=5,
         #     output_column_names=["id", "doc"],
-        #     where_clause=[MatchAgaint('like', 'doc')]
+        #     where_clause=[MatchAgainst('like', 'doc')]
         # )
         # for r in res.fetchall():
         #     logger.info(f"{r[0]} {r[1]}")

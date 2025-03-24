@@ -84,7 +84,7 @@ class ObFtsIndexTest(unittest.TestCase):
         res = self.client.get(
             test_collection_name,
             ids=None,
-            where_clause=[MatchAgaint('like', 'doc'), text("id > 4")],
+            where_clause=[MatchAgainst('like', 'doc'), text("id > 4")],
             output_column_name=["id", "doc"],
             n_limits=1,
         )
