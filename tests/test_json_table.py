@@ -302,7 +302,7 @@ class ObVecJsonTableTest(unittest.TestCase):
         )
 
         res = self.client.perform_json_table_sql(
-            "select * from t1 where CHAR_LENGTH(c2) > 10 or c4 > 50 order by c4"
+            "select * from t1 where CHAR_LENGTH(c2) > 10 or c4 > '50' order by c4"
         )
         self.assertEqual(
             get_all_rows(res),

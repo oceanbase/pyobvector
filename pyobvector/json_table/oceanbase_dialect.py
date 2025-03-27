@@ -64,7 +64,7 @@ class OceanBase(MySQL):
                 using=self._match(TokenType.USING) and self._parse_assignment(),
             )
         
-        def _parse_drop(self, exists: bool = False) -> exp.Drop | exp.Command:
+        def _parse_drop(self, exists: bool = False) -> t.Union[exp.Drop, exp.Command]:
             temporary = self._match(TokenType.TEMPORARY)
             materialized = self._match_text_seq("MATERIALIZED")
 
