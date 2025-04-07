@@ -24,8 +24,9 @@ def get_all_rows(res):
 
 class ObVecJsonTableTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.root_client = ObVecJsonTableClient(user_id='0')
-        self.client = ObVecJsonTableClient(user_id='e5a69db04c5ea54adf324907d4b8f364', user="jtuser@test")
+        self.root_client = ObVecJsonTableClient(user_id='0', admin_id='0')
+        self.client = ObVecJsonTableClient(user_id='e5a69db04c5ea54adf324907d4b8f364', admin_id='0', user="jtuser@test")
+        self.client2 = ObVecJsonTableClient(user_id='11b6dab4c97244fc801797d0e9814074', admin_id='0', user="jtuser@test")
     
     def test_create_and_alter_jtable(self):
         self.root_client._reset()
@@ -34,7 +35,7 @@ class ObVecJsonTableTest(unittest.TestCase):
         self.client.perform_json_table_sql(
             "create table `t2` (c1 int NOT NULL DEFAULT 10, c2 varchar(30) DEFAULT 'ca', c3 varchar not null, c4 decimal(10, 2));"
         )
-        tmp_client = ObVecJsonTableClient(user_id='e5a69db04c5ea54adf324907d4b8f364')
+        tmp_client = ObVecJsonTableClient(user_id='e5a69db04c5ea54adf324907d4b8f364', admin_id='0')
         self.assertEqual(sub_dict(tmp_client.jmetadata.meta_cache['t2'], keys_to_check), 
             [
                 {'jcol_id': 16, 'jcol_name': 'c1', 'jcol_type': 'INT', 'jcol_nullable': False, 'jcol_has_default': True, 'jcol_default': '10'}, 
@@ -461,4 +462,133 @@ class ObVecJsonTableTest(unittest.TestCase):
         self.assertEqual(
             get_all_rows(res),
             [('汽车保养代办', 1, Decimal('1000.00'), datetime.datetime(2025, 3, 14, 0, 0))]
+        )
+
+    def test_user_group(self):
+        self.root_client._reset()
+        self.client.refresh_metadata()
+        self.client2.refresh_metadata()
+
+        # check schemas sync
+        keys_to_check = ['jcol_id', 'jcol_name', 'jcol_type', 'jcol_nullable', 'jcol_has_default', 'jcol_default']
+        self.root_client.perform_json_table_sql(
+            "CREATE TABLE `table_shared` (c1 INT, c2 VARCHAR(1024), c3 DECIMAL(10,2))"
+        )
+        logger.info(sub_dict(self.root_client.jmetadata.meta_cache['table_shared'], keys_to_check))
+        target_schema = [
+            {'jcol_id': 16, 'jcol_name': 'c1', 'jcol_type': 'INT', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+            {'jcol_id': 17, 'jcol_name': 'c2', 'jcol_type': 'VARCHAR(1024)', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+            {'jcol_id': 18, 'jcol_name': 'c3', 'jcol_type': 'DECIMAL(10,2)', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+        ]
+        self.assertEqual(sub_dict(self.root_client.jmetadata.meta_cache['table_shared'], keys_to_check), target_schema)
+
+        self.client.refresh_metadata()
+        logger.info(sub_dict(self.client.jmetadata.meta_cache['table_shared'], keys_to_check))
+        self.assertEqual(sub_dict(self.client.jmetadata.meta_cache['table_shared'], keys_to_check), target_schema)
+
+        self.client2.refresh_metadata()
+        logger.info(sub_dict(self.client2.jmetadata.meta_cache['table_shared'], keys_to_check))
+        self.assertEqual(sub_dict(self.client2.jmetadata.meta_cache['table_shared'], keys_to_check), target_schema)
+
+        # Do ddl in different clients
+        self.client.perform_json_table_sql(
+            "INSERT INTO `table_shared` (c1, c2, c3) VALUES (1, 'foo', 10.0), (2, 'bar', 20.0)"
+        )
+        self.client2.perform_json_table_sql(
+            "INSERT INTO `table_shared` (c1, c2, c3) VALUES (3, 'oceanbase', 100.0)"
+        )
+        res = self.client.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 'foo', Decimal('10.00')), (2, 'bar', Decimal('20.00'))]
+        )
+        res = self.client2.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(3, 'oceanbase', Decimal('100.00'))]
+        )
+
+        # multi-users mode
+        mu_client = ObVecJsonTableClient(user_id=None, admin_id='0', user="jtuser@test")
+        res = mu_client.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 'foo', Decimal('10.00')), (2, 'bar', Decimal('20.00')), (3, 'oceanbase', Decimal('100.00'))]
+        )
+
+        # More examples --- common clients first.
+        self.client.perform_json_table_sql(
+            "UPDATE `table_shared` SET c3 = c3 * 10 WHERE c1 = 1"
+        )
+        res = self.client.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 'foo', Decimal('100.00')), (2, 'bar', Decimal('20.00'))]
+        )
+        res = self.client2.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(3, 'oceanbase', Decimal('100.00'))],
+        )
+
+        self.client2.perform_json_table_sql(
+            "UPDATE `table_shared` SET c2 = UPPER(c2) WHERE c3 = 100.0"
+        )
+        res = self.client.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 'foo', Decimal('100.00')), (2, 'bar', Decimal('20.00'))]
+        )
+        res = self.client2.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(3, 'OCEANBASE', Decimal('100.00'))]
+        )
+
+        res = mu_client.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 'foo', Decimal('100.00')), (2, 'bar', Decimal('20.00')), (3, 'OCEANBASE', Decimal('100.00'))]
+        )
+
+        # More examples ---  multi-users client first.
+        mu_client.perform_json_table_sql(
+            "DELETE FROM `table_shared` WHERE c3 = 100.0"
+        )
+        res = mu_client.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(2, 'bar', Decimal('20.00'))]
+        )
+        res = self.client.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(2, 'bar', Decimal('20.00'))]
+        )
+        res = self.client2.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            []
         )

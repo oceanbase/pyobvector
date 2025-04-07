@@ -50,6 +50,7 @@ class ObVecJsonTableClient(ObVecClient):
         __tablename__ = JSON_TABLE_DATA_TABLE_NAME
 
         user_id = Column(String(128), primary_key=True, autoincrement=False)
+        admin_id = Column(String(128), primary_key=True)
         jtable_name = Column(String(512), primary_key=True)
         jdata_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
         jdata = Column(JSON)
@@ -121,7 +122,8 @@ class ObVecJsonTableClient(ObVecClient):
 
     def __init__(
         self,
-        user_id: str,
+        user_id: Optional[str],
+        admin_id: str,
         uri: str = "127.0.0.1:2881",
         user: str = "root@test",
         password: str = "",
@@ -132,14 +134,31 @@ class ObVecJsonTableClient(ObVecClient):
         self.Base.metadata.create_all(self.engine)
         self.session = sessionmaker(bind=self.engine)
         self.user_id = user_id
-        self.jmetadata = ObVecJsonTableClient.JsonTableMetadata(self.user_id)
+        self.admin_id = admin_id
+        if not self.check_admin_id_ok():
+            raise ValueError(f"Invalid admin_id: {admin_id}")
+        self.jmetadata = ObVecJsonTableClient.JsonTableMetadata(self.admin_id)
         self.jmetadata.reflect(self.engine)
+    
+    def check_admin_id_ok(self):
+        if self.user_id is None:
+            return True
+        
+        session = self.session()
+        distinct_admin_ids = (
+            session.query(ObVecJsonTableClient.JsonTableDataTBL.admin_id)
+            .filter_by(user_id = self.user_id)
+            .distinct()
+            .all()
+        )
+        admin_ids = [admin_id[0] for admin_id in distinct_admin_ids]
+        return (len(admin_ids) == 0) or (len(admin_ids) == 1 and admin_ids[0] == self.admin_id)
 
     def _reset(self):
         # Only for test
         self.perform_raw_text_sql(f"TRUNCATE TABLE {JSON_TABLE_DATA_TABLE_NAME}")
         self.perform_raw_text_sql(f"TRUNCATE TABLE {JSON_TABLE_META_TABLE_NAME}")
-        self.jmetadata = ObVecJsonTableClient.JsonTableMetadata(self.user_id)
+        self.jmetadata = ObVecJsonTableClient.JsonTableMetadata(self.admin_id)
     
     def refresh_metadata(self) -> None:
         self.jmetadata.reflect(self.engine)
@@ -266,7 +285,7 @@ class ObVecJsonTableClient(ObVecClient):
                 'jcol_model': col_type_model,
             })
             session.add(ObVecJsonTableClient.JsonTableMetaTBL(
-                user_id = self.user_id,
+                user_id = self.admin_id,
                 jtable_name = jtable_name,
                 jcol_id = col_id,
                 jcol_name = col_name,
@@ -351,7 +370,7 @@ class ObVecJsonTableClient(ObVecClient):
         col_type_str = self._parse_col_datatype(change_col.dtype)
 
         session.query(ObVecJsonTableClient.JsonTableMetaTBL).filter_by(
-            user_id=self.user_id,
+            user_id=self.admin_id,
             jtable_name=jtable_name,
             jcol_name=origin_col_name
         ).update({
@@ -365,7 +384,7 @@ class ObVecJsonTableClient(ObVecClient):
         })
 
         session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
-            user_id=self.user_id,
+            admin_id=self.admin_id,
             jtable_name=jtable_name,
         ).update({
             ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_insert(
@@ -380,7 +399,7 @@ class ObVecJsonTableClient(ObVecClient):
         })
 
         session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
-            user_id=self.user_id,
+            admin_id=self.admin_id,
             jtable_name=jtable_name,
         ).update({
             ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_replace(
@@ -408,13 +427,13 @@ class ObVecJsonTableClient(ObVecClient):
             raise ValueError(f"{col_name} not exists in {jtable_name}")
 
         session.query(ObVecJsonTableClient.JsonTableMetaTBL).filter_by(
-            user_id=self.user_id,
+            user_id=self.admin_id,
             jtable_name=jtable_name,
             jcol_name=col_name
         ).delete()
 
         session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
-            user_id=self.user_id,
+            admin_id=self.admin_id,
             jtable_name=jtable_name,
         ).update({
             ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_remove(
@@ -443,7 +462,7 @@ class ObVecJsonTableClient(ObVecClient):
         cur_col_id = max([meta['jcol_id'] for meta in self.jmetadata.meta_cache[jtable_name]]) + 1
 
         session.add(ObVecJsonTableClient.JsonTableMetaTBL(
-            user_id = self.user_id,
+            user_id = self.admin_id,
             jtable_name = jtable_name,
             jcol_id = cur_col_id,
             jcol_name = new_col_name,
@@ -457,7 +476,7 @@ class ObVecJsonTableClient(ObVecClient):
 
         if constraints['jcol_default'] is None:
             session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
-                user_id=self.user_id,
+                admin_id=self.admin_id,
                 jtable_name=jtable_name,
             ).update({
                 ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_insert(
@@ -471,7 +490,7 @@ class ObVecJsonTableClient(ObVecClient):
             datum = model(val=self._calc_default_value(constraints['jcol_default']))
             json_val = val2json(datum.val)
             session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
-                user_id=self.user_id,
+                admin_id=self.admin_id,
                 jtable_name=jtable_name,
             ).update({
                 ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_insert(
@@ -502,7 +521,7 @@ class ObVecJsonTableClient(ObVecClient):
             model(val=self._calc_default_value(constraints['jcol_default']))
 
         session.query(ObVecJsonTableClient.JsonTableMetaTBL).filter_by(
-            user_id=self.user_id,
+            user_id=self.admin_id,
             jtable_name=jtable_name,
             jcol_name=col_name
         ).update({
@@ -517,7 +536,7 @@ class ObVecJsonTableClient(ObVecClient):
 
         if constraints['jcol_default'] is None:
             session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
-                user_id=self.user_id,
+                admin_id=self.admin_id,
                 jtable_name=jtable_name,
             ).update({
                 ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_replace(
@@ -535,7 +554,7 @@ class ObVecJsonTableClient(ObVecClient):
             datum = model(val=self._calc_default_value(constraints['jcol_default']))
             json_val = val2json(datum.val)
             session.query(ObVecJsonTableClient.JsonTableDataTBL).filter_by(
-                user_id=self.user_id,
+                admin_id=self.admin_id,
                 jtable_name=jtable_name,
             ).update({
                 ObVecJsonTableClient.JsonTableDataTBL.jdata: func.json_replace(
@@ -566,7 +585,7 @@ class ObVecJsonTableClient(ObVecClient):
             raise ValueError(f"Table {new_table_name} exists!")
         
         session.query(ObVecJsonTableClient.JsonTableMetaTBL).filter_by(
-            user_id=self.user_id,
+            user_id=self.admin_id,
             jtable_name=jtable_name,
         ).update({
             ObVecJsonTableClient.JsonTableMetaTBL.jtable_name: new_table_name,
@@ -624,6 +643,9 @@ class ObVecJsonTableClient(ObVecClient):
             session.close()
 
     def _handle_jtable_dml_insert(self, ast: Expression):
+        if self.user_id is None:
+            raise ValueError(f"inserting is disabled when user_id is None")
+
         if isinstance(ast.this, exp.Schema):
             table_name = ast.this.this.this.this
         else:
@@ -670,6 +692,7 @@ class ObVecJsonTableClient(ObVecClient):
 
             session.add(ObVecJsonTableClient.JsonTableDataTBL(
                 user_id = self.user_id,
+                admin_id = self.admin_id,
                 jtable_name = table_name,
                 jdata = kv,
             ))
@@ -718,7 +741,10 @@ class ObVecJsonTableClient(ObVecClient):
                 column.parent.args['this'] = parse_one(
                     f"JSON_VALUE({JSON_TABLE_DATA_TABLE_NAME}.jdata, '$.{where_col_name}')"
                 )
-            where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+            if self.user_id:
+                where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+            else:
+                where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
         
         if where_clause:
             update_sql = f"UPDATE {JSON_TABLE_DATA_TABLE_NAME} SET jdata = JSON_REPLACE({JSON_TABLE_DATA_TABLE_NAME}.jdata, {', '.join(path_settings)}) WHERE {where_clause}"
@@ -742,7 +768,10 @@ class ObVecJsonTableClient(ObVecClient):
                 column.parent.args['this'] = parse_one(
                     f"JSON_VALUE({JSON_TABLE_DATA_TABLE_NAME}.jdata, '$.{where_col_name}')"
                 )
-            where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+            if self.user_id:
+                where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+            else:
+                where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
         
         if where_clause:
             delete_sql = f"DELETE FROM {JSON_TABLE_DATA_TABLE_NAME} WHERE {where_clause}"
@@ -812,7 +841,10 @@ class ObVecJsonTableClient(ObVecClient):
         else:
             ast.args['joins'] = [join_node]
 
-        extra_filter_str = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}'"
+        if self.user_id:
+            extra_filter_str = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}'"
+        else:
+            extra_filter_str = f"{JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}'"
         if 'where' in ast.args.keys():
             filter_str = str(ast.args['where'].args['this'])
             new_filter_str = f"{extra_filter_str} AND ({filter_str})"
