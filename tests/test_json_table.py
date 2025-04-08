@@ -592,3 +592,53 @@ class ObVecJsonTableTest(unittest.TestCase):
             get_all_rows(res),
             []
         )
+
+    def test_select_with_data_id(self):
+        self.root_client._reset()
+        self.client.refresh_metadata()
+
+        keys_to_check = ['jcol_id', 'jcol_name', 'jcol_type', 'jcol_nullable', 'jcol_has_default', 'jcol_default']
+        self.root_client.perform_json_table_sql(
+            "CREATE TABLE `table_shared` (c1 INT, c2 VARCHAR(1024), c3 DECIMAL(10,2))"
+        )
+        logger.info(sub_dict(self.root_client.jmetadata.meta_cache['table_shared'], keys_to_check))
+        target_schema = [
+            {'jcol_id': 16, 'jcol_name': 'c1', 'jcol_type': 'INT', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+            {'jcol_id': 17, 'jcol_name': 'c2', 'jcol_type': 'VARCHAR(1024)', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+            {'jcol_id': 18, 'jcol_name': 'c3', 'jcol_type': 'DECIMAL(10,2)', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+        ]
+        self.assertEqual(sub_dict(self.root_client.jmetadata.meta_cache['table_shared'], keys_to_check), target_schema)
+
+        self.client.refresh_metadata()
+        logger.info(sub_dict(self.client.jmetadata.meta_cache['table_shared'], keys_to_check))
+        self.assertEqual(sub_dict(self.client.jmetadata.meta_cache['table_shared'], keys_to_check), target_schema)
+
+        self.client.perform_json_table_sql(
+            "INSERT INTO `table_shared` (c1, c2, c3) VALUES (1, 'foo', 10.0), (2, 'bar', 20.0)"
+        )
+
+        res = self.client.perform_json_table_sql(
+            "SELECT * FROM `table_shared`"
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 'foo', Decimal('10.00')), (2, 'bar', Decimal('20.00'))]
+        )
+
+        res = self.client.perform_json_table_sql(
+            "SELECT _data_json_t.jdata_id, * FROM `table_shared`",
+            # select_with_data_id=True
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 1, 'foo', Decimal('10.00')), (2, 2, 'bar', Decimal('20.00'))]
+        )
+
+        res = self.client.perform_json_table_sql(
+            "SELECT * FROM `table_shared`",
+            select_with_data_id=True
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 1, 'foo', Decimal('10.00')), (2, 2, 'bar', Decimal('20.00'))]
+        )

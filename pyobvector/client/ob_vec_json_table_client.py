@@ -72,7 +72,7 @@ class ObVecJsonTableClient(ObVecClient):
                 if col_type == 'VARCHAR':
                     factory = JsonTableVarcharFactory(255)
                 else:
-                    varchar_pattern = r'VARCHAR\((\d+)\)'
+                    varchar_pattern = r'VARCHAR\s*\((\d+)\)'
                     varchar_matches = re.findall(varchar_pattern, col_type)
                     factory = JsonTableVarcharFactory(int(varchar_matches[0]))
                 model = factory.get_json_table_varchar_type()
@@ -163,7 +163,7 @@ class ObVecJsonTableClient(ObVecClient):
     def refresh_metadata(self) -> None:
         self.jmetadata.reflect(self.engine)
 
-    def perform_json_table_sql(self, sql: str) -> Optional[CursorResult]:
+    def perform_json_table_sql(self, sql: str, select_with_data_id: bool = False) -> Optional[CursorResult]:
         """Perform common SQL that operates on JSON Table."""
         ast = parse_one(sql, dialect="oceanbase")
         if isinstance(ast, exp.Create):
@@ -185,7 +185,7 @@ class ObVecJsonTableClient(ObVecClient):
             self._handle_jtable_dml_delete(ast)
             return None
         elif isinstance(ast, exp.Select):
-            return self._handle_jtable_dml_select(ast)
+            return self._handle_jtable_dml_select(ast, select_with_data_id)
         else:
             raise ValueError(f"{type(ast)} not supported")
         
@@ -788,7 +788,7 @@ class ObVecJsonTableClient(ObVecClient):
             return "DECIMAL(10, 0)"
         return jdata_type
 
-    def _handle_jtable_dml_select(self, ast: Expression):
+    def _handle_jtable_dml_select(self, ast: Expression, select_with_data_id: bool = False):
         table_name = ast.args['from'].this.this.this
         if not self._check_table_exists(table_name):
             raise ValueError(f"Table {table_name} does not exists")
@@ -807,6 +807,20 @@ class ObVecJsonTableClient(ObVecClient):
         
         need_replace_select_exprs = False
         new_select_exprs = []
+
+        if select_with_data_id:
+            data_id_col_expr = exp.Column()
+            data_id_identifier = exp.Identifier()
+            data_id_identifier.args['this'] = 'jdata_id'
+            data_id_identifier.args['quoted'] = False
+            data_json_table_identifier = exp.Identifier()
+            data_json_table_identifier.args['this'] = JSON_TABLE_DATA_TABLE_NAME
+            data_json_table_identifier.args['quoted'] = False
+            data_id_col_expr.args['this'] = data_id_identifier
+            data_id_col_expr.args['table'] = data_json_table_identifier
+            new_select_exprs.append(data_id_col_expr)
+            need_replace_select_exprs = True
+
         for select_expr in ast.args['expressions']:
             if isinstance(select_expr, exp.Star):
                 need_replace_select_exprs = True
@@ -827,7 +841,8 @@ class ObVecJsonTableClient(ObVecClient):
 
         for col in ast.find_all(exp.Column):
             if 'table' in col.args.keys():
-                col.args['table'].args['this'] = tmp_table_name
+                if col.args['table'].args['this'] != JSON_TABLE_DATA_TABLE_NAME:
+                    col.args['table'].args['this'] = tmp_table_name
             else:
                 identifier = exp.Identifier()
                 identifier.args['this'] = tmp_table_name
