@@ -20,6 +20,7 @@ from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.dialects import registry
 import sqlalchemy.sql.functions as func_mod
 import numpy as np
+from urllib.parse import quote
 from .index_param import IndexParams, IndexParam
 from .fts_index_param import FtsIndexParam
 from ..schema import (
@@ -67,8 +68,8 @@ class ObVecClient:
         setattr(func_mod, "st_dwithin", st_dwithin)
         setattr(func_mod, "st_astext", st_astext)
 
-        # Escape @ to avoid parsing errors in connection_str
-        password = password.replace('@', '%40')
+        user = quote(user, safe="")
+        password = quote(password, safe="")
         
         connection_str = (
             f"mysql+oceanbase://{user}:{password}@{uri}/{db_name}?charset=utf8mb4"
