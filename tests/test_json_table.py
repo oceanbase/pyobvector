@@ -642,3 +642,104 @@ class ObVecJsonTableTest(unittest.TestCase):
             get_all_rows(res),
             [(1, 1, 'foo', Decimal('10.00')), (2, 2, 'bar', Decimal('20.00'))]
         )
+
+    def test_insert_update_delete_with_row_count(self):
+        self.root_client._reset()
+
+        keys_to_check = ['jcol_id', 'jcol_name', 'jcol_type', 'jcol_nullable', 'jcol_has_default', 'jcol_default']
+        self.root_client.perform_json_table_sql(
+            "CREATE TABLE `test_dml_with_row_count` (c1 INT, c2 VARCHAR(1024), c3 DECIMAL(10,2))"
+        )
+        logger.info(sub_dict(self.root_client.jmetadata.meta_cache['test_dml_with_row_count'], keys_to_check))
+        target_schema = [
+            {'jcol_id': 16, 'jcol_name': 'c1', 'jcol_type': 'INT', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+            {'jcol_id': 17, 'jcol_name': 'c2', 'jcol_type': 'VARCHAR(1024)', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+            {'jcol_id': 18, 'jcol_name': 'c3', 'jcol_type': 'DECIMAL(10,2)', 'jcol_nullable': True, 'jcol_has_default': False, 'jcol_default': None},
+        ]
+
+        client_without_user_id = ObVecJsonTableClient(
+            user_id= None,
+            admin_id='0',
+            user="jtuser@test"
+        )
+        
+        row_cnt = client_without_user_id.perform_json_table_sql(
+            "INSERT INTO `test_dml_with_row_count` (c1, c2, c3) VALUES (1, 'foo', 10.0), (2, 'bar', 20.0)",
+            opt_user_id="1",
+        )
+        self.assertEqual(row_cnt, 2)
+
+        row_cnt = client_without_user_id.perform_json_table_sql(
+            "INSERT INTO `test_dml_with_row_count` (c1, c2, c3) VALUES (3, 'oceanbase', 100.0)",
+            opt_user_id="2",
+        )
+        self.assertEqual(row_cnt, 1)
+
+        res = client_without_user_id.perform_json_table_sql(
+            "SELECT * FROM `test_dml_with_row_count`",
+            opt_user_id="1",
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 'foo', Decimal('10.00')), (2, 'bar', Decimal('20.00'))]
+        )
+
+        res = client_without_user_id.perform_json_table_sql(
+            "SELECT * FROM `test_dml_with_row_count`",
+            opt_user_id="2",
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(3, 'oceanbase', Decimal('100.00'))]
+        )
+
+        res = client_without_user_id.perform_json_table_sql(
+            "SELECT * FROM `test_dml_with_row_count`",
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 'foo', Decimal('10.00')), (2, 'bar', Decimal('20.00')), (3, 'oceanbase', Decimal('100.00'))]
+        )
+
+        row_cnt = client_without_user_id.perform_json_table_sql(
+            "UPDATE `test_dml_with_row_count` SET c2=UPPER(c2) WHERE c1=1",
+            opt_user_id="1",
+        )
+        self.assertEqual(row_cnt, 1)
+        res = client_without_user_id.perform_json_table_sql(
+            "SELECT * FROM `test_dml_with_row_count`",
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 'FOO', Decimal('10.00')), (2, 'bar', Decimal('20.00')), (3, 'oceanbase', Decimal('100.00'))]
+        )
+
+        row_cnt = client_without_user_id.perform_json_table_sql(
+            "UPDATE `test_dml_with_row_count` SET c2=UPPER(c2)",
+        )
+        self.assertEqual(row_cnt, 3)
+        res = client_without_user_id.perform_json_table_sql(
+            "SELECT * FROM `test_dml_with_row_count`",
+        )
+        self.assertEqual(
+            get_all_rows(res),
+            [(1, 'FOO', Decimal('10.00')), (2, 'BAR', Decimal('20.00')), (3, 'OCEANBASE', Decimal('100.00'))]
+        )
+
+        row_cnt = client_without_user_id.perform_json_table_sql(
+            "DELETE FROM `test_dml_with_row_count` WHERE c1=3",
+            opt_user_id="2"
+        )
+        self.assertEqual(row_cnt, 1)
+        res = client_without_user_id.perform_json_table_sql(
+            "SELECT * FROM `test_dml_with_row_count`",
+        )
+        self.assertEqual(get_all_rows(res), [(1, 'FOO', Decimal('10.00')), (2, 'BAR', Decimal('20.00'))])
+        row_cnt = client_without_user_id.perform_json_table_sql(
+            "DELETE FROM `test_dml_with_row_count`",
+        )
+        self.assertEqual(row_cnt, 2)
+        res = client_without_user_id.perform_json_table_sql(
+            "SELECT * FROM `test_dml_with_row_count`",
+        )
+        self.assertEqual(get_all_rows(res), [])

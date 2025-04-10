@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 
 from sqlalchemy import Column, Integer, String, JSON, Engine, select, text, func, CursorResult
 from sqlalchemy.dialects.mysql import TINYINT
@@ -163,7 +163,12 @@ class ObVecJsonTableClient(ObVecClient):
     def refresh_metadata(self) -> None:
         self.jmetadata.reflect(self.engine)
 
-    def perform_json_table_sql(self, sql: str, select_with_data_id: bool = False) -> Optional[CursorResult]:
+    def perform_json_table_sql(
+        self,
+        sql: str,
+        select_with_data_id: bool = False,
+        opt_user_id: Optional[str] = None,
+    ) -> Union[Optional[CursorResult], int]:
         """Perform common SQL that operates on JSON Table."""
         ast = parse_one(sql, dialect="oceanbase")
         if isinstance(ast, exp.Create):
@@ -176,16 +181,16 @@ class ObVecJsonTableClient(ObVecClient):
             self._handle_alter_json_table(ast)
             return None
         elif isinstance(ast, exp.Insert):
-            self._handle_jtable_dml_insert(ast)
-            return None
+            row_count = self._handle_jtable_dml_insert(ast, opt_user_id)
+            return row_count
         elif isinstance(ast, exp.Update):
-            self._handle_jtable_dml_update(ast)
-            return None
+            row_count = self._handle_jtable_dml_update(ast, opt_user_id)
+            return row_count
         elif isinstance(ast, exp.Delete):
-            self._handle_jtable_dml_delete(ast)
-            return None
+            row_count = self._handle_jtable_dml_delete(ast, opt_user_id)
+            return row_count
         elif isinstance(ast, exp.Select):
-            return self._handle_jtable_dml_select(ast, select_with_data_id)
+            return self._handle_jtable_dml_select(ast, select_with_data_id, opt_user_id)
         else:
             raise ValueError(f"{type(ast)} not supported")
         
@@ -642,8 +647,10 @@ class ObVecJsonTableClient(ObVecClient):
         finally:
             session.close()
 
-    def _handle_jtable_dml_insert(self, ast: Expression):
-        if self.user_id is None:
+    def _handle_jtable_dml_insert(self, ast: Expression, opt_user_id: Optional[str] = None):
+        real_user_id = opt_user_id or self.user_id
+
+        if real_user_id is None:
             raise ValueError(f"inserting is disabled when user_id is None")
 
         if isinstance(ast.this, exp.Schema):
@@ -673,6 +680,7 @@ class ObVecJsonTableClient(ObVecClient):
             raise ValueError(f"Invalid ast type {ast.this}")
 
         session = self.session()
+        n_new_records = 0
         for tuple in ast.expression.expressions:
             expr_list = tuple.expressions
             if len(expr_list) != len(insert_col_names):
@@ -691,21 +699,26 @@ class ObVecJsonTableClient(ObVecClient):
             logger.debug(f"================= [INSERT] =============== {kv}")
 
             session.add(ObVecJsonTableClient.JsonTableDataTBL(
-                user_id = self.user_id,
+                user_id = real_user_id,
                 admin_id = self.admin_id,
                 jtable_name = table_name,
                 jdata = kv,
             ))
+            n_new_records += 1
         
         try:
             session.commit()
         except Exception as e:
             session.rollback()
             logger.error(f"Error occurred: {e}")
+            n_new_records = 0
         finally:
             session.close()
+            return n_new_records
 
-    def _handle_jtable_dml_update(self, ast: Expression):
+    def _handle_jtable_dml_update(self, ast: Expression, opt_user_id: Optional[str] = None):
+        real_user_id = opt_user_id or self.user_id
+
         table_name = ast.this.this.this
         if not self._check_table_exists(table_name):
             raise ValueError(f"Table {table_name} does not exists")
@@ -733,7 +746,7 @@ class ObVecJsonTableClient(ObVecClient):
             path_settings.append(f"'$.{col_name}', {str(col_expr)}")
 
         where_clause = None        
-        if 'where' in ast.args.keys():
+        if 'where' in ast.args.keys() and ast.args['where']:
             for column in ast.args['where'].find_all(exp.Column):
                 where_col_name = column.this.this
                 if not self._check_col_exists(table_name, where_col_name):
@@ -741,8 +754,8 @@ class ObVecJsonTableClient(ObVecClient):
                 column.parent.args['this'] = parse_one(
                     f"JSON_VALUE({JSON_TABLE_DATA_TABLE_NAME}.jdata, '$.{where_col_name}')"
                 )
-            if self.user_id:
-                where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+            if real_user_id:
+                where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{real_user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
             else:
                 where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
         
@@ -752,15 +765,18 @@ class ObVecJsonTableClient(ObVecClient):
             update_sql = f"UPDATE {JSON_TABLE_DATA_TABLE_NAME} SET jdata = JSON_REPLACE({JSON_TABLE_DATA_TABLE_NAME}.jdata, {', '.join(path_settings)})"
 
         logger.debug(f"===================== do update: {update_sql}")
-        self.perform_raw_text_sql(update_sql)
+        res = self.perform_raw_text_sql(update_sql)
+        return res.rowcount
 
-    def _handle_jtable_dml_delete(self, ast: Expression):
+    def _handle_jtable_dml_delete(self, ast: Expression, opt_user_id: Optional[str] = None):
+        real_user_id = opt_user_id or self.user_id
+
         table_name = ast.this.this.this
         if not self._check_table_exists(table_name):
             raise ValueError(f"Table {table_name} does not exists")
         
         where_clause = None
-        if 'where' in ast.args.keys():
+        if 'where' in ast.args.keys() and ast.args['where']:
             for column in ast.args['where'].find_all(exp.Column):
                 where_col_name = column.this.this
                 if not self._check_col_exists(table_name, where_col_name):
@@ -768,8 +784,8 @@ class ObVecJsonTableClient(ObVecClient):
                 column.parent.args['this'] = parse_one(
                     f"JSON_VALUE({JSON_TABLE_DATA_TABLE_NAME}.jdata, '$.{where_col_name}')"
                 )
-            if self.user_id:
-                where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
+            if real_user_id:
+                where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{real_user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
             else:
                 where_clause = f"{JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}' AND ({str(ast.args['where'].this)})"
         
@@ -779,7 +795,8 @@ class ObVecJsonTableClient(ObVecClient):
             delete_sql = f"DELETE FROM {JSON_TABLE_DATA_TABLE_NAME}"
 
         logger.debug(f"===================== do delete: {delete_sql}")
-        self.perform_raw_text_sql(delete_sql)
+        res = self.perform_raw_text_sql(delete_sql)
+        return res.rowcount
 
     def _get_full_datatype(self, jdata_type: str):
         if jdata_type.upper() == "VARCHAR":
@@ -788,7 +805,14 @@ class ObVecJsonTableClient(ObVecClient):
             return "DECIMAL(10, 0)"
         return jdata_type
 
-    def _handle_jtable_dml_select(self, ast: Expression, select_with_data_id: bool = False):
+    def _handle_jtable_dml_select(
+        self,
+        ast: Expression,
+        select_with_data_id: bool = False,
+        opt_user_id: Optional[str] = None
+    ):
+        real_user_id = opt_user_id or self.user_id
+
         table_name = ast.args['from'].this.this.this
         if not self._check_table_exists(table_name):
             raise ValueError(f"Table {table_name} does not exists")
@@ -856,8 +880,8 @@ class ObVecJsonTableClient(ObVecClient):
         else:
             ast.args['joins'] = [join_node]
 
-        if self.user_id:
-            extra_filter_str = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{self.user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}'"
+        if real_user_id:
+            extra_filter_str = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{real_user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}'"
         else:
             extra_filter_str = f"{JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}'"
         if 'where' in ast.args.keys():
