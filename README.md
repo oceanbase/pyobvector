@@ -15,7 +15,7 @@ poetry install
 - install with pip:
 
 ```shell
-pip install pyobvector==0.2.8
+pip install pyobvector==0.2.9
 ```
 
 ## Build Doc

@@ -144,15 +144,16 @@ class ObVecJsonTableClient(ObVecClient):
         if self.user_id is None:
             return True
         
-        session = self.session()
-        distinct_admin_ids = (
-            session.query(ObVecJsonTableClient.JsonTableDataTBL.admin_id)
-            .filter_by(user_id = self.user_id)
-            .distinct()
-            .all()
-        )
-        admin_ids = [admin_id[0] for admin_id in distinct_admin_ids]
-        return (len(admin_ids) == 0) or (len(admin_ids) == 1 and admin_ids[0] == self.admin_id)
+        with self.session() as session:
+            with session.begin():
+                distinct_admin_ids = (
+                    session.query(ObVecJsonTableClient.JsonTableDataTBL.admin_id)
+                    .filter_by(user_id = self.user_id)
+                    .distinct()
+                    .all()
+                )
+                admin_ids = [admin_id[0] for admin_id in distinct_admin_ids]
+                return (len(admin_ids) == 0) or (len(admin_ids) == 1 and admin_ids[0] == self.admin_id)
 
     def _reset(self):
         # Only for test
