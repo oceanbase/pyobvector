@@ -426,7 +426,7 @@ class ObVecJsonTableTest(unittest.TestCase):
         )
 
         res = self.client.perform_json_table_sql(
-            "SELECT field0, field1, field2 FROM `table_unit_test` WHERE DATE(field3)='2025-03-09' ORDER BY field2 DESC LIMIT 2"
+            "SELECT field0 AS 消费内容, `table_unit_test`.field1 AS 消费类型, field2 AS 消费金额 FROM `table_unit_test` WHERE DATE(`table_unit_test`.field3)='2025-03-09' ORDER BY 消费金额 DESC LIMIT 2"
         )
         # logger.info(get_all_rows(res))
         self.assertEqual(

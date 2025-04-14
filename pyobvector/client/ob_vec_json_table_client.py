@@ -846,6 +846,7 @@ class ObVecJsonTableClient(ObVecClient):
             new_select_exprs.append(data_id_col_expr)
             need_replace_select_exprs = True
 
+        alias_names = set()
         for select_expr in ast.args['expressions']:
             if isinstance(select_expr, exp.Star):
                 need_replace_select_exprs = True
@@ -857,6 +858,8 @@ class ObVecJsonTableClient(ObVecClient):
                     col_expr.args['this'] = identifier
                     new_select_exprs.append(col_expr)
             else:
+                if isinstance(select_expr, exp.Alias):
+                    alias_names.add(select_expr.args['alias'].args['this'])
                 new_select_exprs.append(select_expr)
         if need_replace_select_exprs:
             ast.args['expressions'] = new_select_exprs
@@ -865,6 +868,9 @@ class ObVecJsonTableClient(ObVecClient):
         json_table_str = f"json_table({JSON_TABLE_DATA_TABLE_NAME}.jdata, '$' COLUMNS ({', '.join(json_table_meta_str)})) {tmp_table_name}"
 
         for col in ast.find_all(exp.Column):
+            col_name = col.args["this"].args["this"]
+            if col_name in alias_names:
+                continue
             if 'table' in col.args.keys():
                 if col.args['table'].args['this'] != JSON_TABLE_DATA_TABLE_NAME:
                     col.args['table'].args['this'] = tmp_table_name
@@ -894,6 +900,6 @@ class ObVecJsonTableClient(ObVecClient):
             where_clause.args['this'] = parse_one(extra_filter_str)
             ast.args['where'] = where_clause
 
-        select_sql = str(ast)
+        select_sql = ast.sql(dialect="mysql", identify=True)
         logger.debug(f"===================== do select: {select_sql}")
         return self.perform_raw_text_sql(select_sql)
