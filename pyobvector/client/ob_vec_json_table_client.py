@@ -26,8 +26,8 @@ from ..json_table import (
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-JSON_TABLE_META_TABLE_NAME = "_meta_json_t"
-JSON_TABLE_DATA_TABLE_NAME = "_data_json_t"
+JSON_TABLE_META_TABLE_NAME = "meta_json_t"
+JSON_TABLE_DATA_TABLE_NAME = "data_json_t"
 
 class ObVecJsonTableClient(ObVecClient):
     """OceanBase Vector Store Client with JSON Table."""

@@ -626,7 +626,7 @@ class ObVecJsonTableTest(unittest.TestCase):
         )
 
         res = self.client.perform_json_table_sql(
-            "SELECT _data_json_t.jdata_id, * FROM `table_shared`",
+            "SELECT data_json_t.jdata_id, * FROM `table_shared`",
             # select_with_data_id=True
         )
         self.assertEqual(
