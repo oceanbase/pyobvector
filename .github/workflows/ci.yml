@@ -11,6 +11,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sqlglot-version: [ "11.7.0", "26.20.0" ]
 
     steps:
     - name: Check out code
@@ -27,6 +30,7 @@ jobs:
         
     - name: Install dependencies
       run: |
+        poetry add sqlglot==${{ matrix.sqlglot-version }}
         poetry install
 
     - name: Run Docker container
