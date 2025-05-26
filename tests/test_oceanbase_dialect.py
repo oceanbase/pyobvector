@@ -1,8 +1,7 @@
 import unittest
-from pyobvector import *
 import logging
 
-from sqlglot import parse_one
+from pyobvector.util.compatible_sqlglot import parse_one
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

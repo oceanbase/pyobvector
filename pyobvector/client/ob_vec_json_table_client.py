@@ -1,18 +1,16 @@
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Union
 
 from sqlalchemy import Column, Integer, String, JSON, Engine, select, text, func, CursorResult
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from sqlglot import parse_one, exp, Expression, to_identifier
-from sqlglot.expressions import Concat
+from sqlglot import exp, Expression, to_identifier
 
 
 from .ob_vec_client import ObVecClient
 from ..json_table import (
-    OceanBase,
     ChangeColumn,
     JsonTableBool,
     JsonTableTimestamp,
@@ -22,6 +20,7 @@ from ..json_table import (
     val2json,
     json_value
 )
+from ..util.compatible_sqlglot import parse_one
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
