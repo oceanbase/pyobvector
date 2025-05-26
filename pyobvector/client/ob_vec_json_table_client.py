@@ -1,16 +1,18 @@
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Any, Union
 
 from sqlalchemy import Column, Integer, String, JSON, Engine, select, text, func, CursorResult
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from sqlglot import exp, Expression, to_identifier
+from sqlglot import parse_one, exp, Expression, to_identifier
+from sqlglot.expressions import Concat
 
 
 from .ob_vec_client import ObVecClient
 from ..json_table import (
+    OceanBase,
     ChangeColumn,
     JsonTableBool,
     JsonTableTimestamp,
@@ -20,7 +22,6 @@ from ..json_table import (
     val2json,
     json_value
 )
-from ..util.compatible_sqlglot import parse_one
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -170,7 +171,7 @@ class ObVecJsonTableClient(ObVecClient):
         opt_user_id: Optional[str] = None,
     ) -> Union[Optional[CursorResult], int]:
         """Perform common SQL that operates on JSON Table."""
-        ast = parse_one(sql, dialect="oceanbase")
+        ast = parse_one(sql, read="oceanbase")
         if isinstance(ast, exp.Create):
             if ast.kind and ast.kind == 'TABLE':
                 self._handle_create_json_table(ast)
