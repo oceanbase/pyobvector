@@ -11,7 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.mysql import LONGTEXT
 from .enum import IntEnum
-from ..schema import VECTOR
+from ..schema import ARRAY, VECTOR
 
 
 class DataType(IntEnum):
@@ -60,8 +60,8 @@ def convert_datatype_to_sqltype(datatype: DataType):
         return LONGTEXT
     if datatype == DataType.VARCHAR:
         return String
-    # if datatype == DataType.ARRAY:
-    #     return ARRAY
+    if datatype == DataType.ARRAY:
+        return ARRAY
     if datatype == DataType.JSON:
         return JSON
     if datatype == DataType.FLOAT_VECTOR:

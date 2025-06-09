@@ -41,6 +41,7 @@ In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 """
 from .client import *
 from .schema import (
+    ARRAY,
     VECTOR,
     POINT,
     VectorIndex,
@@ -67,6 +68,7 @@ __all__ = [
     "IndexParam",
     "IndexParams",
     "DataType",
+    "ARRAY",
     "VECTOR",
     "POINT",
     "VectorIndex",

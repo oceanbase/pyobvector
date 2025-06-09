@@ -1,7 +1,9 @@
 """OceanBase table definition reflection."""
 import re
 import logging
-from sqlalchemy.dialects.mysql.reflection import MySQLTableDefinitionParser, _re_compile
+from sqlalchemy.dialects.mysql.reflection import MySQLTableDefinitionParser, _re_compile, cleanup_text
+
+from pyobvector.schema.array import nested_array
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,16 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
             )
         )
         ### end of block
+
+        self._re_array_column = _re_compile(
+            r"\s*"
+            r"%(iq)s(?P<name>(?:%(esc_fq)s|[^%(fq)s])+)%(fq)s\s+"
+            r"(?P<coltype_with_args>(?i:(?<!\w)array(?!\w))\s*\([^()]*(?:\([^()]*\)[^()]*)*\))"
+            r"(?:\s+(?P<notnull>(?:NOT\s+)?NULL))?"
+            r"(?:\s+DEFAULT\s+(?P<default>(?:NULL|'(?:''|[^'])*'|\(.+?\)|[\-\w\.\(\)]+)))?"
+            r"(?:\s+COMMENT\s+'(?P<comment>(?:''|[^'])*)')?"
+            r"\s*,?\s*$" % quotes
+        )
 
         self._re_key = _re_compile(
             r"  "
@@ -63,6 +75,59 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
                 iq=quotes["iq"], esc_fq=quotes["esc_fq"], fq=quotes["fq"], on=kw["on"]
             )
         )
+
+    def _parse_column(self, line, state):
+        m = self._re_array_column.match(line)
+        if m:
+            spec = m.groupdict()
+            name, coltype_with_args = spec["name"].strip(), spec["coltype_with_args"].strip()
+
+            item_pattern = re.compile(
+                r"^(?:array\s*\()*([\w]+)(?:\(([\d,]+)\))?\)*$",
+                re.IGNORECASE
+            )
+            item_m = item_pattern.match(coltype_with_args)
+            if not item_m:
+                raise ValueError(f"Failed to find inner type from array column definition: {line}")
+
+            item_type = self.dialect.ischema_names[item_m.group(1).lower()]
+            item_type_arg = item_m.group(2)
+            if item_type_arg is None or item_type_arg == "":
+                item_type_args = []
+            elif item_type_arg[0] == "'" and item_type_arg[-1] == "'":
+                item_type_args = self._re_csv_str.findall(item_type_arg)
+            else:
+                item_type_args = [int(v) for v in self._re_csv_int.findall(item_type_arg)]
+
+            nested_level = coltype_with_args.lower().count('array')
+            type_instance = nested_array(nested_level)(item_type(*item_type_args))
+
+            col_kw = {}
+
+            # NOT NULL
+            col_kw["nullable"] = True
+            if spec.get("notnull", False) == "NOT NULL":
+                col_kw["nullable"] = False
+
+            # DEFAULT
+            default = spec.get("default", None)
+
+            if default == "NULL":
+                # eliminates the need to deal with this later.
+                default = None
+
+            comment = spec.get("comment", None)
+
+            if comment is not None:
+                comment = cleanup_text(comment)
+
+            col_d = dict(
+                name=name, type=type_instance, default=default, comment=comment
+            )
+            col_d.update(col_kw)
+            state.columns.append(col_d)
+        else:
+            super()._parse_column(line, state)
 
     def _parse_constraints(self, line):
         """Parse a CONSTRAINT line."""
