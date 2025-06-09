@@ -55,7 +55,7 @@ class ObVecJsonTableClient(ObVecClient):
         jdata_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
         jdata = Column(JSON)
 
-    class JsonTableMetadata:
+    class JsonTableMetadata: 
         def __init__(self, user_id: str):
             self.user_id = user_id
             self.meta_cache: Dict[str, List] = {}
