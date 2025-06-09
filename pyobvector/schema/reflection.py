@@ -36,7 +36,7 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
         self._re_array_column = _re_compile(
             r"\s*"
             r"%(iq)s(?P<name>(?:%(esc_fq)s|[^%(fq)s])+)%(fq)s\s+"
-            r"(?P<coltype_with_args>(?i:array)\s*\([^()]*(?:\([^()]*\)[^()]*)*\))"
+            r"(?P<coltype_with_args>(?i:(?<!\w)array(?!\w))\s*\([^()]*(?:\([^()]*\)[^()]*)*\))"
             r"(?:\s+(?P<notnull>(?:NOT\s+)?NULL))?"
             r"(?:\s+DEFAULT\s+(?P<default>(?:NULL|'(?:''|[^'])*'|\(.+?\)|[\-\w\.\(\)]+)))?"
             r"(?:\s+COMMENT\s+'(?P<comment>(?:''|[^'])*)')?"
