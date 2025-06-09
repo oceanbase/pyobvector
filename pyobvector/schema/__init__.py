@@ -1,5 +1,6 @@
 """A extension for SQLAlchemy for vector storage related schema definition.
 
+* ARRAY             An extended data type in SQLAlchemy for ObVecClient
 * VECTOR            An extended data type in SQLAlchemy for ObVecClient
 * VectorIndex       An extended index type in SQLAlchemy for ObVecClient
 * CreateVectorIndex Vector Index Creation statement clause
@@ -18,6 +19,7 @@
 * CreateFtsIndex    Full Text Search Index Creation statement clause
 * MatchAgainst      Full Text Search clause
 """
+from .array import ARRAY
 from .vector import VECTOR
 from .geo_srid_point import POINT
 from .vector_index import VectorIndex, CreateVectorIndex
@@ -30,6 +32,7 @@ from .full_text_index import FtsIndex, CreateFtsIndex
 from .match_against_func import MatchAgainst
 
 __all__ = [
+    "ARRAY",
     "VECTOR",
     "POINT",
     "VectorIndex",
