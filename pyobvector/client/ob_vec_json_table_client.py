@@ -200,7 +200,7 @@ class ObVecJsonTableClient(ObVecClient):
             return "INT"
         if datatype == exp.DataType.Type.TINYINT:
             return "TINYINT"
-        if datatype == exp.DataType.Type.TIMESTAMP:
+        if datatype in (exp.DataType.Type.TIMESTAMP, exp.DataType.Type.TIMESTAMPTZ):
             return "TIMESTAMP"
         if datatype == exp.DataType.Type.VARCHAR:
             return "VARCHAR"
