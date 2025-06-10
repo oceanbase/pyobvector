@@ -188,5 +188,49 @@ class ObVecClientTest(unittest.TestCase):
             else:
                 self.fail("Unexpected row: {}".format(row))
 
+    def test_refresh_metadata(self):
+        test_collection_name = "ob_refresh_metadata_test"
+        self.client.drop_table_if_exist(test_collection_name)
+
+        self.client.create_table(
+            table_name=test_collection_name,
+            columns=[
+                Column("id", Integer, primary_key=True, autoincrement=True),
+                Column("name", String(64), nullable=True),
+            ]
+        )
+        self.client.perform_raw_text_sql(f"ALTER TABLE {test_collection_name} ADD COLUMN age INTEGER")
+
+        err_msg = ""
+        try:
+            self.client.insert(
+                table_name=test_collection_name,
+                data={
+                    "id": 1,
+                    "name": "Alice",
+                    "age": 20,
+                },
+            )
+        except Exception as e:
+            err_msg = str(e)
+        self.assertTrue(len(err_msg) > 0)
+
+        self.client.refresh_metadata([test_collection_name])
+        self.client.insert(
+            table_name=test_collection_name,
+            data={
+                "id": 1,
+                "name": "Alice",
+                "age": 20,
+            },
+        )
+        res = self.client.get(
+            table_name=test_collection_name,
+            ids=None,
+            output_column_name=["id", "name", "age"],
+        ).fetchall()
+        self.assertTrue(len(res) > 0)
+
+
 if __name__ == "__main__":
     unittest.main()
