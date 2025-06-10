@@ -38,9 +38,9 @@ class ARRAY(UserDefinedType):
 
         item_proc = item_type.dialect_impl(dialect).bind_processor(dialect)
 
-        def process(value: Optional[Sequence[Any]]) -> Optional[str]:
-            if value is None:
-                return None
+        def process(value: Optional[Sequence[Any] | str]) -> Optional[str]:
+            if value is None or isinstance(value, str):
+                return value
 
             def convert(val):
                 if isinstance(val, (list, tuple)):

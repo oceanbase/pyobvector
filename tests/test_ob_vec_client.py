@@ -1,3 +1,4 @@
+import json
 import unittest
 from pyobvector import *
 from sqlalchemy import Column, Integer, JSON, String, text
@@ -166,7 +167,7 @@ class ObVecClientTest(unittest.TestCase):
 
         data = [
             {"name": "Alice", "arr_c": ["tag1", "tag2"], "arr_nested_c": [[1, 2, 3, 4, 5]]},
-            {"name": "Bob", "arr_c": ["tag2", "tag3"], "arr_nested_c": [[5, 6], [7, 8]]},
+            {"name": "Bob", "arr_c": ["tag2", "tag3"], "arr_nested_c": json.dumps([[6, 7, 8]])},
             {"name": "Charlie", "arr_c": ["tag1"], "arr_nested_c": [[9]]},
         ]
         self.client.insert(test_collection_name, data=data)
