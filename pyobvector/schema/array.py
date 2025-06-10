@@ -22,6 +22,12 @@ class ARRAY(UserDefinedType):
         if isinstance(item_type, type):
             item_type = item_type()
         self.item_type = item_type
+        if isinstance(item_type, ARRAY):
+            self.dim = item_type.dim + 1
+        else:
+            self.dim = 1
+        if self.dim > 6:
+            raise ValueError("Maximum nesting level of 6 exceeded")
 
     def get_col_spec(self, **kw):  # pylint: disable=unused-argument
         """Parse to array data type definition in text SQL."""
@@ -31,6 +37,20 @@ class ARRAY(UserDefinedType):
             base_type = str(self.item_type)
         return f"ARRAY({base_type})"
 
+    def _get_list_depth(self, value: Any) -> int:
+        if not isinstance(value, list):
+            return 0
+        max_depth = 0
+        for element in value:
+            current_depth = self._get_list_depth(element)
+            if current_depth > max_depth:
+                max_depth = current_depth
+        return 1 + max_depth
+
+    def _validate_dimension(self, value: list[Any]):
+        arr_depth = self._get_list_depth(value)
+        assert arr_depth == self.dim, "Array dimension mismatch, expected {}, got {}".format(self.dim, arr_depth)
+
     def bind_processor(self, dialect):
         item_type = self.item_type
         while isinstance(item_type, ARRAY):
@@ -39,7 +59,10 @@ class ARRAY(UserDefinedType):
         item_proc = item_type.dialect_impl(dialect).bind_processor(dialect)
 
         def process(value: Optional[Sequence[Any] | str]) -> Optional[str]:
-            if value is None or isinstance(value, str):
+            if value is None:
+                return None
+            if isinstance(value, str):
+                self._validate_dimension(json.loads(value))
                 return value
 
             def convert(val):
@@ -50,6 +73,7 @@ class ARRAY(UserDefinedType):
                 return val
 
             processed = convert(value)
+            self._validate_dimension(processed)
             return json.dumps(processed)
 
         return process
@@ -123,6 +147,12 @@ def nested_array(dim: int) -> Type[ARRAY]:
                 item_type = item_type()
 
             assert not isinstance(item_type, ARRAY), "The item_type of NestedArray should not be an ARRAY type"
-            self.item_type = item_type
+
+            nested_type = item_type
+            for _ in range(dim):
+                nested_type = ARRAY(nested_type)
+
+            self.item_type = nested_type.item_type
+            self.dim = dim
 
     return NestedArray
