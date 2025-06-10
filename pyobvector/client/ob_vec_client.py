@@ -89,6 +89,13 @@ class ObVecClient:
                         message=ExceptionsMessage.ClusterVersionIsLow,
                     )
 
+    def refresh_metadata(self, tables: Optional[list[str]] = None):
+        """Reload metadata from the database."""
+        if tables is None:
+            self.metadata_obj.reflect(bind=self.engine, extend_existing=True)
+        else:
+            self.metadata_obj.reflect(bind=self.engine, only=tables, extend_existing=True)
+
     def _insert_partition_hint_for_query_sql(self, sql: str, partition_hint: str):
         from_index = sql.find("FROM")
         assert from_index != -1
