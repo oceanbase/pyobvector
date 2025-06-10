@@ -1,3 +1,4 @@
+import json
 import unittest
 from pyobvector import *
 from sqlalchemy import Column, Integer, JSON, String, text
@@ -165,8 +166,8 @@ class ObVecClientTest(unittest.TestCase):
         )
 
         data = [
-            {"name": "Alice", "arr_c": ["tag1", "tag2"], "arr_nested_c": [[1, 2], [3, 4]]},
-            {"name": "Bob", "arr_c": ["tag2", "tag3"], "arr_nested_c": [[5, 6], [7, 8]]},
+            {"name": "Alice", "arr_c": ["tag1", "tag2"], "arr_nested_c": [[1, 2, 3, 4, 5]]},
+            {"name": "Bob", "arr_c": ["tag2", "tag3"], "arr_nested_c": json.dumps([[6, 7, 8]])},
             {"name": "Charlie", "arr_c": ["tag1"], "arr_nested_c": [[9]]},
         ]
         self.client.insert(test_collection_name, data=data)
@@ -180,8 +181,8 @@ class ObVecClientTest(unittest.TestCase):
         for row in res.fetchall():
             name = row[0]
             if name == "Alice":
-                self.assertEqual(row[1],  ["tag1", "tag2"])
-                self.assertEqual(row[2], [[1, 2], [3, 4]])
+                self.assertEqual(row[1], ["tag1", "tag2"])
+                self.assertEqual(row[2], [[1, 2, 3, 4, 5]])
             elif name == "Charlie":
                 self.assertEqual(row[1], ["tag1"])
                 self.assertEqual(row[2], [[9]])
