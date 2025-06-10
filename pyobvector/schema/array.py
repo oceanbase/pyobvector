@@ -10,7 +10,6 @@ class ARRAY(UserDefinedType):
     """ARRAY data type definition with support for up to 6 levels of nesting."""
     cache_ok = True
     _string = String()
-    _max_nesting_level = 6
 
     def __init__(self, item_type: Union[TypeEngine, type]):
         """Construct an ARRAY.
@@ -18,25 +17,11 @@ class ARRAY(UserDefinedType):
         Args:
             item_type: The data type of items in this array. For nested arrays,
                       pass another ARRAY type.
-
-        Raises:
-            ValueError: If nesting level exceeds the maximum allowed level (6).
         """
         super(UserDefinedType, self).__init__()
         if isinstance(item_type, type):
             item_type = item_type()
         self.item_type = item_type
-        self._validate_nesting_level()
-
-    def _validate_nesting_level(self):
-        """Validate that the nesting level does not exceed the maximum allowed level."""
-        level = 1
-        current_type = self.item_type
-        while isinstance(current_type, ARRAY):
-            level += 1
-            if level > self._max_nesting_level:
-                raise ValueError(f"Maximum nesting level of {self._max_nesting_level} exceeded")
-            current_type = current_type.item_type
 
     def get_col_spec(self, **kw):  # pylint: disable=unused-argument
         """Parse to array data type definition in text SQL."""
@@ -47,7 +32,11 @@ class ARRAY(UserDefinedType):
         return f"ARRAY({base_type})"
 
     def bind_processor(self, dialect):
-        item_proc = self.item_type.dialect_impl(dialect).bind_processor(dialect)
+        item_type = self.item_type
+        while isinstance(item_type, ARRAY):
+            item_type = item_type.item_type
+
+        item_proc = item_type.dialect_impl(dialect).bind_processor(dialect)
 
         def process(value: Optional[Sequence[Any]]) -> Optional[str]:
             if value is None:
@@ -66,7 +55,11 @@ class ARRAY(UserDefinedType):
         return process
 
     def result_processor(self, dialect, coltype):
-        item_proc = self.item_type.dialect_impl(dialect).result_processor(dialect, coltype)
+        item_type = self.item_type
+        while isinstance(item_type, ARRAY):
+            item_type = item_type.item_type
+
+        item_proc = item_type.dialect_impl(dialect).result_processor(dialect, coltype)
 
         def process(value: Optional[str]) -> Optional[List[Any]]:
             if value is None:
@@ -85,7 +78,11 @@ class ARRAY(UserDefinedType):
         return process
 
     def literal_processor(self, dialect):
-        item_proc = self.item_type.dialect_impl(dialect).literal_processor(dialect)
+        item_type = self.item_type
+        while isinstance(item_type, ARRAY):
+            item_type = item_type.item_type
+
+        item_proc = item_type.dialect_impl(dialect).literal_processor(dialect)
 
         def process(value: Sequence[Any]) -> str:
             def convert(val):
@@ -99,21 +96,6 @@ class ARRAY(UserDefinedType):
             return json.dumps(processed)
 
         return process
-
-    def __repr__(self):
-        """Return a string representation of the array type."""
-        current_type = self.item_type
-        nesting_level = 1
-        base_type = current_type
-
-        # Find the innermost type and count nesting level
-        while isinstance(current_type, ARRAY):
-            nesting_level += 1
-            current_type = current_type.item_type
-            if not isinstance(current_type, ARRAY):
-                base_type = current_type
-
-        return f"{nesting_level}D_Array({base_type})"
 
 
 def nested_array(dim: int) -> Type[ARRAY]:
@@ -131,12 +113,16 @@ def nested_array(dim: int) -> Type[ARRAY]:
     if not 1 <= dim <= 6:
         raise ValueError("Dimension must be between 1 and 6")
 
-    class ArrayType(ARRAY):
-        def __init__(self, item_type: Union[TypeEngine, type]):
-            nested_type = item_type
-            for _ in range(dim - 1):
-                nested_type = ARRAY(nested_type)
-            super().__init__(nested_type)
+    class NestedArray(ARRAY):
+        cache_ok = True
+        _string = String()
 
-    ArrayType.__name__ = f"{dim}D_Array"
-    return ArrayType
+        def __init__(self, item_type: Union[TypeEngine, type]):
+            super(UserDefinedType, self).__init__()
+            if isinstance(item_type, type):
+                item_type = item_type()
+
+            assert not isinstance(item_type, ARRAY), "The item_type of NestedArray should not be an ARRAY type"
+            self.item_type = item_type
+
+    return NestedArray
