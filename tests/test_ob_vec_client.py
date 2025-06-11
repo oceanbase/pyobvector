@@ -232,6 +232,51 @@ class ObVecClientTest(unittest.TestCase):
         ).fetchall()
         self.assertTrue(len(res) > 0)
 
+    def test_alter_table(self):
+        test_collection_name = "ob_alter_table_test"
+        self.client.drop_table_if_exist(test_collection_name)
+
+        self.client.create_table(
+            table_name=test_collection_name,
+            columns=[
+                Column("id", Integer, primary_key=True, autoincrement=True),
+            ]
+        )
+        self.client.add_columns(
+            table_name=test_collection_name,
+            columns=[
+                Column("name", String(64), nullable=True),
+                Column("age", Integer, nullable=True),
+            ]
+        )
+        self.client.insert(
+            table_name=test_collection_name,
+            data={
+                "id": 1,
+                "name": "Alice",
+                "age": 20,
+            },
+        )
+
+        res = self.client.get(
+            table_name=test_collection_name,
+            ids=[1],
+        ).fetchall()
+        self.assertEqual(len(res), 1)
+        self.assertEqual(len(res[0]), 3)
+
+        self.client.drop_columns(
+            table_name=test_collection_name,
+            column_names=["age"]
+        )
+
+        res = self.client.get(
+            table_name=test_collection_name,
+            ids=[1],
+        ).fetchall()
+        self.assertEqual(len(res), 1)
+        self.assertEqual(len(res[0]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

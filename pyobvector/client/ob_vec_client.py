@@ -90,11 +90,19 @@ class ObVecClient:
                     )
 
     def refresh_metadata(self, tables: Optional[list[str]] = None):
-        """Reload metadata from the database."""
-        if tables is None:
-            self.metadata_obj.reflect(bind=self.engine, extend_existing=True)
-        else:
+        """Reload metadata from the database.
+        
+        Args:
+            tables (Optional[list[str]]): names of the tables to refresh. If None, refresh all tables.
+        """
+        if tables is not None:
+            for table_name in tables:
+                if table_name in self.metadata_obj.tables:
+                    self.metadata_obj.remove(Table(table_name, self.metadata_obj))
             self.metadata_obj.reflect(bind=self.engine, only=tables, extend_existing=True)
+        else:
+            self.metadata_obj.clear()
+            self.metadata_obj.reflect(bind=self.engine, extend_existing=True)
 
     def _insert_partition_hint_for_query_sql(self, sql: str, partition_hint: str):
         from_index = sql.find("FROM")
@@ -808,3 +816,47 @@ class ObVecClient:
         with self.engine.connect() as conn:
             with conn.begin():
                 return conn.execute(text(text_sql))
+
+    def add_columns(
+        self,
+        table_name: str,
+        columns: list[Column],
+    ):
+        """Add multiple columns to an existing table.
+        
+        Args:
+            table_name (string): table name
+            columns (list[Column]): list of SQLAlchemy Column objects representing the new columns
+        """
+        compiler = self.engine.dialect.ddl_compiler(self.engine.dialect, None)
+        column_specs = [compiler.get_column_specification(column) for column in columns]
+        columns_ddl = ", ".join(f"ADD COLUMN {spec}" for spec in column_specs)
+        
+        with self.engine.connect() as conn:
+            with conn.begin():
+                conn.execute(
+                    text(f"ALTER TABLE `{table_name}` {columns_ddl}")
+                )
+                
+        self.refresh_metadata([table_name])
+
+    def drop_columns(
+        self,
+        table_name: str,
+        column_names: list[str],
+    ):
+        """Drop multiple columns from an existing table.
+        
+        Args:
+            table_name (string): table name
+            column_names (list[str]): names of the columns to drop
+        """
+        columns_ddl = ", ".join(f"DROP COLUMN `{name}`" for name in column_names)
+        
+        with self.engine.connect() as conn:
+            with conn.begin():
+                conn.execute(
+                    text(f"ALTER TABLE `{table_name}` {columns_ddl}")
+                )
+                
+        self.refresh_metadata([table_name])
