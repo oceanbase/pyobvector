@@ -3,7 +3,7 @@ import re
 import logging
 from sqlalchemy.dialects.mysql.reflection import MySQLTableDefinitionParser, _re_compile, cleanup_text
 
-from pyobvector.schema.array import nested_array
+from pyobvector.schema.array import ARRAY
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,9 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
                 item_type_args = [int(v) for v in self._re_csv_int.findall(item_type_arg)]
 
             nested_level = coltype_with_args.lower().count('array')
-            type_instance = nested_array(nested_level)(item_type(*item_type_args))
+            type_instance = item_type(*item_type_args)
+            for _ in range(nested_level):
+                type_instance = ARRAY(type_instance)
 
             col_kw = {}
 

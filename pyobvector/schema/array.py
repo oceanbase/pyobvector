@@ -1,6 +1,6 @@
 """ARRAY: An extended data type for SQLAlchemy"""
 import json
-from typing import Any, List, Optional, Sequence, Union, Type
+from typing import Any, List, Optional, Sequence, Union
 
 from sqlalchemy.sql.type_api import TypeEngine
 from sqlalchemy.types import UserDefinedType, String
@@ -120,39 +120,3 @@ class ARRAY(UserDefinedType):
             return json.dumps(processed)
 
         return process
-
-
-def nested_array(dim: int) -> Type[ARRAY]:
-    """Create a nested array type class with specified dimensions.
-    
-    Args:
-        dim: The number of dimensions for the array type (1-6)
-        
-    Returns:
-        A class type that can be instantiated with an item_type to create a nested array
-        
-    Raises:
-        ValueError: If dim is not between 1 and 6
-    """
-    if not 1 <= dim <= 6:
-        raise ValueError("Dimension must be between 1 and 6")
-
-    class NestedArray(ARRAY):
-        cache_ok = True
-        _string = String()
-
-        def __init__(self, item_type: Union[TypeEngine, type]):
-            super(UserDefinedType, self).__init__()
-            if isinstance(item_type, type):
-                item_type = item_type()
-
-            assert not isinstance(item_type, ARRAY), "The item_type of NestedArray should not be an ARRAY type"
-
-            nested_type = item_type
-            for _ in range(dim):
-                nested_type = ARRAY(nested_type)
-
-            self.item_type = nested_type.item_type
-            self.dim = dim
-
-    return NestedArray
