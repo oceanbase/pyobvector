@@ -236,6 +236,7 @@ class ObVecJsonTableClient(ObVecClient):
             raise ValueError("Table name duplicated")
         
         session = self.session()
+        session.execute(text("SET @@session.autocommit=0"))
         new_meta_cache_items = []
         col_id = 16
         for col_def in ast.find_all(exp.ColumnDef):
@@ -607,6 +608,7 @@ class ObVecJsonTableClient(ObVecClient):
             raise ValueError(f"Table {jtable_name} does not exists")
         
         session = self.session()
+        session.execute(text("SET @@session.autocommit=0"))
         for action in ast.actions:
             if isinstance(action, ChangeColumn):
                 self._handle_alter_jtable_change_column(
@@ -681,6 +683,7 @@ class ObVecJsonTableClient(ObVecClient):
             raise ValueError(f"Invalid ast type {ast.this}")
 
         session = self.session()
+        session.execute(text("SET @@session.autocommit=0"))
         n_new_records = 0
         for tuple in ast.expression.expressions:
             expr_list = tuple.expressions
