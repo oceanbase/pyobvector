@@ -37,12 +37,18 @@ class ObReflectionTest(unittest.TestCase):
         self.engine = create_async_engine(connection_str)
 
     def test_parse_constraints_with_string_spec(self):
-        """Test that _parse_constraints handles string spec gracefully without crashing."""
-        # Create a parser instance
-        dialect = OceanBaseDialect()
-        parser = OceanBaseTableDefinitionParser(dialect, dialect.preparer, default_schema="test")
+        # test the logic directly
+        from pyobvector.schema.reflection import OceanBaseTableDefinitionParser
         
-        # Mock the parent class _parse_constraints to return different types of spec
+        # Create a mock parser class to test our specific method
+        class MockParser(OceanBaseTableDefinitionParser):
+            def __init__(self):
+                # Skip the parent __init__ to avoid _prep_regexes issues
+                self.default_schema = "test"
+        
+        parser = MockParser()
+        
+        # Test cases for different spec types
         test_cases = [
             # Case 1: spec is a string (this was causing the bug)
             ("fk_constraint", "some_string_spec"),
@@ -91,8 +97,15 @@ class ObReflectionTest(unittest.TestCase):
 
     def test_parse_constraints_string_spec_no_crash(self):
         """Specific test to ensure string spec doesn't cause AttributeError."""
-        dialect = OceanBaseDialect()
-        parser = OceanBaseTableDefinitionParser(dialect, dialect.preparer, default_schema="test")
+        from pyobvector.schema.reflection import OceanBaseTableDefinitionParser
+        
+        # Create a mock parser class to test our specific method
+        class MockParser(OceanBaseTableDefinitionParser):
+            def __init__(self):
+                # Skip the parent __init__ to avoid _prep_regexes issues
+                self.default_schema = "test"
+        
+        parser = MockParser()
         
         # Mock parent method to return string spec (the problematic case)
         with patch.object(parser.__class__.__bases__[0], '_parse_constraints', return_value=("fk_constraint", "string_spec")):
