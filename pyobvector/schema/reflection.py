@@ -143,10 +143,11 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
                 # do not handle partition
                 return ret
             if tp == "fk_constraint":
-                if len(spec["table"]) == 2 and spec["table"][0] == self.default_schema:
-                    spec["table"] = spec["table"][1:]
-            if isinstance(spec, dict) and spec.get("onupdate", "").lower() == "restrict":
-                spec["onupdate"] = None
-            if isinstance(spec, dict) and spec.get("ondelete", "").lower() == "restrict":
-                spec["ondelete"] = None
+                table = spec.get("table", []) if isinstance(spec, dict) else []
+                if isinstance(spec, dict) and isinstance(table, list) and len(table) == 2 and table[0] == self.default_schema:
+                    spec["table"] = table[1:]
+                if isinstance(spec, dict) and (spec.get("onupdate") or "").lower() == "restrict":
+                    spec["onupdate"] = None
+                if isinstance(spec, dict) and (spec.get("ondelete") or "").lower() == "restrict":
+                    spec["ondelete"] = None
         return ret

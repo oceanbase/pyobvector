@@ -3,6 +3,8 @@ from pyobvector import *
 import logging
 from unittest.mock import Mock, patch
 from pyobvector.schema.reflection import OceanBaseTableDefinitionParser
+from sqlalchemy.dialects.mysql.reflection import MySQLTableDefinitionParser
+import copy  # Added for deepcopy
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +39,7 @@ class ObReflectionTest(unittest.TestCase):
         self.engine = create_async_engine(connection_str)
 
     def test_parse_constraints_with_string_spec(self):
-        # test the logic directly
+        """Test that _parse_constraints handles string spec gracefully without crashing."""
         from pyobvector.schema.reflection import OceanBaseTableDefinitionParser
         
         # Create a mock parser class to test our specific method
@@ -48,52 +50,141 @@ class ObReflectionTest(unittest.TestCase):
         
         parser = MockParser()
         
-        # Test cases for different spec types
+        # Test cases: we'll mock the parent method to return what we want to test
         test_cases = [
-            # Case 1: spec is a string (this was causing the bug)
-            ("fk_constraint", "some_string_spec"),
-            # Case 2: spec is a dict with onupdate/ondelete = "restrict" 
-            ("fk_constraint", {
-                "table": ["test", "other_table"],
-                "onupdate": "restrict", 
-                "ondelete": "restrict"
-            }),
-            # Case 3: spec is a dict with onupdate/ondelete = "cascade"
-            ("fk_constraint", {
-                "table": ["other_table"],
-                "onupdate": "cascade",
-                "ondelete": "cascade"
-            }),
-            # Case 4: spec is a dict without onupdate/ondelete
-            ("fk_constraint", {
-                "table": ["other_table"],
-                "name": "fk_test"
-            }),
-            # Case 5: spec is None (edge case)
-            ("fk_constraint", None),
+            {
+                "name": "String spec (the bug case)",
+                "parent_return": ("fk_constraint", "some_string_spec"),
+                "expected_result": ("fk_constraint", "some_string_spec")  # Should remain unchanged
+            },
+            {
+                "name": "Dict spec with restrict values",
+                "parent_return": ("fk_constraint", {
+                    "table": ["test", "other_table"],
+                    "onupdate": "restrict", 
+                    "ondelete": "restrict"
+                }),
+                "expected_result": ("fk_constraint", {
+                    "table": ["other_table"],  # Should be trimmed
+                    "onupdate": None,  # Should be None
+                    "ondelete": None   # Should be None
+                })
+            },
+            {
+                "name": "Dict spec with cascade values", 
+                "parent_return": ("fk_constraint", {
+                    "table": ["other_table"],
+                    "onupdate": "cascade",
+                    "ondelete": "cascade"
+                }),
+                "expected_result": ("fk_constraint", {
+                    "table": ["other_table"],
+                    "onupdate": "cascade",  # Should remain unchanged
+                    "ondelete": "cascade"   # Should remain unchanged
+                })
+            },
+            {
+                "name": "Dict spec with None values",
+                "parent_return": ("fk_constraint", {
+                    "table": ["other_table"],
+                    "onupdate": None,
+                    "ondelete": None
+                }),
+                "expected_result": ("fk_constraint", {
+                    "table": ["other_table"],
+                    "onupdate": None,  # Should remain None
+                    "ondelete": None   # Should remain None
+                })
+            },
+            {
+                "name": "Dict spec without table key",
+                "parent_return": ("fk_constraint", {
+                    "onupdate": "restrict",
+                    "ondelete": "cascade"
+                }),
+                "expected_result": ("fk_constraint", {
+                    "onupdate": None,  # Should be None
+                    "ondelete": "cascade"   # Should remain unchanged
+                })
+            },
+            {
+                "name": "Dict spec with single table (no trimming)",
+                "parent_return": ("fk_constraint", {
+                    "table": ["other_table"],
+                    "onupdate": "restrict"
+                }),
+                "expected_result": ("fk_constraint", {
+                    "table": ["other_table"],  # Should remain unchanged (only 1 element)
+                    "onupdate": None  # Should be None
+                })
+            },
+            {
+                "name": "Dict spec with empty dict",
+                "parent_return": ("fk_constraint", {}),
+                "expected_result": ("fk_constraint", {})  # Should remain unchanged
+            },
+            {
+                "name": "Dict spec with None table",
+                "parent_return": ("fk_constraint", {
+                    "table": None,
+                    "onupdate": "restrict"
+                }),
+                "expected_result": ("fk_constraint", {
+                    "table": None,  # Should remain unchanged (not a list)
+                    "onupdate": None  # Should be None
+                })
+            },
+            {
+                "name": "Dict spec with non-list table",
+                "parent_return": ("fk_constraint", {
+                    "table": "not_a_list",
+                    "ondelete": "restrict"
+                }),
+                "expected_result": ("fk_constraint", {
+                    "table": "not_a_list",  # Should remain unchanged (not a list)
+                    "ondelete": None  # Should be None
+                })
+            },
+            {
+                "name": "None spec",
+                "parent_return": ("fk_constraint", None),
+                "expected_result": ("fk_constraint", None)  # Should remain unchanged
+            },
+            {
+                "name": "Non-fk constraint with string spec",
+                "parent_return": ("unique", "string_spec"),
+                "expected_result": ("unique", "string_spec")  # Should remain unchanged
+            }
         ]
         
-        for tp, spec in test_cases:
-            with self.subTest(tp=tp, spec=spec):
-                # Mock the parent class method to return our test case
-                with patch.object(parser.__class__.__bases__[0], '_parse_constraints', return_value=(tp, spec)):
-                    # This should not raise an exception
+        for test_case in test_cases:
+            with self.subTest(name=test_case["name"]):
+                # Create a copy of the input to avoid mutation issues
+                import copy
+                parent_return = copy.deepcopy(test_case["parent_return"])
+                expected_result = test_case["expected_result"]
+                
+                # Mock the parent class method to return our test input
+                with patch.object(MySQLTableDefinitionParser, '_parse_constraints', return_value=parent_return):
+                    # Call our method - this should apply our bugfix logic
                     result = parser._parse_constraints("dummy line")
                     
                     # Verify the result
-                    if result:
-                        result_tp, result_spec = result
-                        self.assertEqual(result_tp, tp)
-                        
-                        # If spec was a dict with "restrict" values, they should be None now
-                        if isinstance(spec, dict):
-                            if spec.get("onupdate") == "restrict":
-                                self.assertIsNone(result_spec.get("onupdate"))
-                            if spec.get("ondelete") == "restrict":
-                                self.assertIsNone(result_spec.get("ondelete"))
-                        else:
-                            # If spec was not a dict, it should remain unchanged
-                            self.assertEqual(result_spec, spec)
+                    self.assertIsNotNone(result)
+                    result_tp, result_spec = result
+                    expected_tp, expected_spec = expected_result
+                    
+                    self.assertEqual(result_tp, expected_tp)
+                    
+                    # For detailed comparison
+                    if isinstance(expected_spec, dict) and isinstance(result_spec, dict):
+                        for key, expected_value in expected_spec.items():
+                            actual_value = result_spec.get(key)
+                            self.assertEqual(actual_value, expected_value, 
+                                f"Test '{test_case['name']}': Key '{key}' expected {expected_value}, got {actual_value}")
+                    else:
+                        self.assertEqual(result_spec, expected_spec,
+                            f"Test '{test_case['name']}': Expected {expected_spec}, got {result_spec}")
 
     def test_parse_constraints_string_spec_no_crash(self):
         """Specific test to ensure string spec doesn't cause AttributeError."""
@@ -108,7 +199,7 @@ class ObReflectionTest(unittest.TestCase):
         parser = MockParser()
         
         # Mock parent method to return string spec (the problematic case)
-        with patch.object(parser.__class__.__bases__[0], '_parse_constraints', return_value=("fk_constraint", "string_spec")):
+        with patch.object(MySQLTableDefinitionParser, '_parse_constraints', return_value=("fk_constraint", "string_spec")):
             # This should not raise AttributeError: 'str' object has no attribute 'get'
             try:
                 result = parser._parse_constraints("dummy line")
