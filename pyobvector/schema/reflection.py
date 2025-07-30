@@ -145,8 +145,8 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
             if tp == "fk_constraint":
                 if len(spec["table"]) == 2 and spec["table"][0] == self.default_schema:
                     spec["table"] = spec["table"][1:]
-            if spec.get("onupdate", "").lower() == "restrict":
+            if isinstance(spec, dict) and spec.get("onupdate", "").lower() == "restrict":
                 spec["onupdate"] = None
-            if spec.get("ondelete", "").lower() == "restrict":
+            if isinstance(spec, dict) and spec.get("ondelete", "").lower() == "restrict":
                 spec["ondelete"] = None
         return ret
