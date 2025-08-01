@@ -171,7 +171,7 @@ class ObVecJsonTableClient(ObVecClient):
         opt_user_id: Optional[str] = None,
     ) -> Union[Optional[CursorResult], int]:
         """Perform common SQL that operates on JSON Table."""
-        ast = parse_one(sql, dialect="oceanbase")
+        ast = parse_one(sql, read="oceanbase")
         if isinstance(ast, exp.Create):
             if ast.kind and ast.kind == 'TABLE':
                 self._handle_create_json_table(ast)
