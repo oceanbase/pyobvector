@@ -49,10 +49,12 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
             # r"(?:(?P<type>\S+) )?KEY"
             r"(?: +{iq}(?P<name>(?:{esc_fq}|[^{fq}])+){fq})?"
             r"(?: +USING +(?P<using_pre>\S+))?"
-            r" +\((?P<columns>.+?)\)"
+            r" +\((?P<columns>[^)]+)\)"
             r"(?: +USING +(?P<using_post>\S+))?"
-            r"(?: +(KEY_)?BLOCK_SIZE *[ =]? *(?P<keyblock>\S+) *(LOCAL)?)?"
+            r"(?: +WITH +\((?P<vector_params>[^)]+)\))?"
             r"(?: +WITH PARSER +(?P<parser>\S+))?"
+            r"(?: +PARSER_PROPERTIES=\((?P<parser_properties>[^)]+)\))?"
+            r"(?: +(KEY_)?BLOCK_SIZE *[ =]? *(?P<keyblock>\S+) *(LOCAL)?)?"
             r"(?: +COMMENT +(?P<comment>(\x27\x27|\x27([^\x27])*?\x27)+))?"
             r"(?: +/\*(?P<version_sql>.+)\*/ *)?"
             r",?$".format(iq=quotes["iq"], esc_fq=quotes["esc_fq"], fq=quotes["fq"])
@@ -137,17 +139,15 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
         if ret:
             tp, spec = ret
 
-            if tp is None:
+            if tp is None or tp == "partition" or not isinstance(spec, dict):
                 return ret
-            if tp == "partition":
-                # do not handle partition
-                return ret
-            if tp == "fk_constraint" and isinstance(spec, dict):
+
+            if tp == "fk_constraint":
                 table = spec.get("table", [])
                 if isinstance(table, list) and len(table) == 2 and table[0] == self.default_schema:
                     spec["table"] = table[1:]
-                # Convert RESTRICT actions to None for both onupdate and ondelete
-                for action in ["onupdate", "ondelete"]:
-                    if (spec.get(action) or "").lower() == "restrict":
-                        spec[action] = None
+
+            for action in ["onupdate", "ondelete"]:
+                if (spec.get(action) or "").lower() == "restrict":
+                    spec[action] = None
         return ret
