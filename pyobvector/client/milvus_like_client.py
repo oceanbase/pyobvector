@@ -379,8 +379,8 @@ class MilvusLikeClient(Client):
                     )
                 lower_metric_type_str = search_params["metric_type"].lower()
                 if lower_metric_type_str not in (
-                    "l2", "neg_ip"
-                ):  # For OceanBase, only support l2/ip distance in ann_search
+                    "l2", "neg_ip", "cosine", "ip"
+                ):
                     raise VectorMetricTypeException(
                         code=ErrorCode.INVALID_ARGUMENT,
                         message=ExceptionsMessage.MetricTypeValueInvalid,

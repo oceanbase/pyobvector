@@ -477,6 +477,46 @@ class ObMilkClientTest(unittest.TestCase):
         self.assertEqual(
             set([r['id'] for r in res]), set([12, 111, 11, 112, 10])
         )
+    
+    def test_ann_search_cosine(self):
+        test_collection_name = "ann_test_cosine"
+        self.client.drop_collection(test_collection_name)
+
+        schema = self.client.create_schema()
+        schema.add_field(field_name="id", datatype=DataType.INT64, is_primary=True)
+        schema.add_field(field_name="embedding", datatype=DataType.FLOAT_VECTOR, dim=3)
+        schema.add_field(field_name="meta", datatype=DataType.JSON, nullable=True)
+
+        idx_params = self.client.prepare_index_params()
+        idx_params.add_index(
+            field_name="embedding",
+            index_type=VecIndexType.HNSW,
+            index_name="vidx",
+            metric_type="cosine",
+            params={"M": 16, "efConstruction": 256},
+        )
+
+        self.client.create_collection(
+            collection_name=test_collection_name,
+            schema=schema,
+            index_params=idx_params,
+        )
+
+        vector_value1 = [1.2, 0.5, 0.7]
+        vector_value2 = [0.34, 0.3, 1.64]
+        data1 = [{"id": i, "embedding": vector_value1} for i in range(10)]
+        data1.extend([{"id": i, "embedding": vector_value2} for i in range(10, 13)])
+        data1.extend([{"id": i, "embedding": vector_value2} for i in range(111, 113)])
+        self.client.insert(collection_name=test_collection_name, data=data1)
+
+        self.client.search(
+            collection_name=test_collection_name,
+            data=[0, 0, 1],
+            anns_field="embedding",
+            limit=5,
+            output_fields=["id"],
+            search_params={"metric_type": "cosine"}
+        )
 
     def test_upsert_data(self):
         test_collection_name = "upsert_test"
