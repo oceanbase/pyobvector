@@ -18,6 +18,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.dialects import registry
+from sqlalchemy.schema import CreateTable
 import sqlalchemy.sql.functions as func_mod
 import numpy as np
 from urllib.parse import quote
@@ -170,6 +171,16 @@ class ObVecClient:
         """Create `IndexParams` to hold index configuration."""
         return IndexParams()
 
+    def _get_sparse_vector_index_params(
+        self, vidxs: Optional[IndexParams]
+    ):
+        if vidxs is None:
+            return None
+        return [
+            vidx for vidx in vidxs
+            if vidx.is_index_type_sparse_vector()
+        ]
+
     def create_table_with_index_params(
         self,
         table_name: str,
@@ -188,6 +199,7 @@ class ObVecClient:
             vids (Optional[IndexParams]) : optional vector index schema
             partitions (Optional[ObPartition]) : optional partition strategy
         """
+        sparse_vidxs = self._get_sparse_vector_index_params(vidxs)
         with self.engine.connect() as conn:
             with conn.begin():
                 # create table with common index
@@ -206,7 +218,15 @@ class ObVecClient:
                         *columns,
                         extend_existing=True,
                     )
-                table.create(self.engine, checkfirst=True)
+                if sparse_vidxs is not None and len(sparse_vidxs) > 0:
+                    create_table_sql = str(CreateTable(table).compile(self.engine))
+                    new_sql = create_table_sql[:create_table_sql.rfind(')')]
+                    for sparse_vidx in sparse_vidxs:
+                        new_sql += f",\n\tVECTOR INDEX {sparse_vidx.index_name}({sparse_vidx.field_name}) with (distance=inner_product)"
+                    new_sql += "\n)"
+                    conn.execute(text(new_sql))
+                else:
+                    table.create(self.engine, checkfirst=True)
                 # do partition
                 if partitions is not None:
                     conn.execute(
@@ -215,6 +235,8 @@ class ObVecClient:
                 # create vector indexes
                 if vidxs is not None:
                     for vidx in vidxs:
+                        if vidx.is_index_type_sparse_vector():
+                            continue
                         vidx = VectorIndex(
                             vidx.index_name,
                             table.c[vidx.field_name],
@@ -602,7 +624,7 @@ class ObVecClient:
     def ann_search(
         self,
         table_name: str,
-        vec_data: list,
+        vec_data: Union[list, dict],
         vec_column_name: str,
         distance_func,
         with_dist: bool = False,
@@ -618,7 +640,7 @@ class ObVecClient:
 
         Args:
             table_name (string) : table name
-            vec_data (list) : the vector data to search
+            vec_data (list/dict) : the vector/sparse_vector data to search
             vec_column_name (string) : which vector field to search
             distance_func : function to calculate distance between vectors
             with_dist (bool) : return result with distance
@@ -628,6 +650,9 @@ class ObVecClient:
             idx_name_hint : post-filtering enabled if vector index name is specified
                             Or pre-filtering enabled
         """
+        if not (isinstance(vec_data, list) or isinstance(vec_data, dict)):
+            raise ValueError("'vec_data' type must be in 'list'/'dict'")
+
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
 
         if output_column_names is not None:
@@ -639,12 +664,19 @@ class ObVecClient:
             columns.extend(extra_output_cols)
 
         if with_dist:
-            columns.append(
-                distance_func(
-                    table.c[vec_column_name],
-                    "[" + ",".join([str(np.float32(v)) for v in vec_data]) + "]",
+            if isinstance(vec_data, list):
+                columns.append(
+                    distance_func(
+                        table.c[vec_column_name],
+                        "[" + ",".join([str(np.float32(v)) for v in vec_data]) + "]",
+                    )
                 )
-            )
+            else:
+                columns.append(
+                    distance_func(
+                        table.c[vec_column_name], f"{vec_data}"
+                    )
+                )
         # if idx_name_hint is not None:
         #     stmt = select(*columns).with_hint(
         #         table,
@@ -657,12 +689,19 @@ class ObVecClient:
         if where_clause is not None:
             stmt = stmt.where(*where_clause)
 
-        stmt = stmt.order_by(
-            distance_func(
-                table.c[vec_column_name],
-                "[" + ",".join([str(np.float32(v)) for v in vec_data]) + "]",
+        if isinstance(vec_data, list):
+            stmt = stmt.order_by(
+                distance_func(
+                    table.c[vec_column_name],
+                    "[" + ",".join([str(np.float32(v)) for v in vec_data]) + "]",
+                )
             )
-        )
+        else:
+            stmt = stmt.order_by(
+                distance_func(
+                    table.c[vec_column_name], f"{vec_data}"
+                )
+            )
         stmt_str = (
             str(stmt.compile(
                 dialect=self.engine.dialect,

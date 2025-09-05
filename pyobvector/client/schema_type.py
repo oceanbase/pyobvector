@@ -11,7 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.mysql import LONGTEXT
 from .enum import IntEnum
-from ..schema import ARRAY, VECTOR
+from ..schema import ARRAY, SPARSE_VECTOR, VECTOR
 
 
 class DataType(IntEnum):
@@ -35,7 +35,7 @@ class DataType(IntEnum):
     FLOAT_VECTOR = 101
     # FLOAT16_VECTOR = 102
     # BFLOAT16_VECTOR = 103
-    # SPARSE_FLOAT_VECTOR = 104
+    SPARSE_FLOAT_VECTOR = 104
 
 
 def convert_datatype_to_sqltype(datatype: DataType):
@@ -66,4 +66,6 @@ def convert_datatype_to_sqltype(datatype: DataType):
         return JSON
     if datatype == DataType.FLOAT_VECTOR:
         return VECTOR
+    if datatype == DataType.SPARSE_FLOAT_VECTOR:
+        return SPARSE_VECTOR
     raise ValueError(f"Invalid DataType: {datatype}")

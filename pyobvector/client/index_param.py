@@ -9,7 +9,7 @@ class VecIndexType(Enum):
     IVFFLAT = 2
     IVFSQ = 3
     IVFPQ = 4
-
+    DAAT = 5
 
 class IndexParam:
     """Vector index parameters.
@@ -31,6 +31,7 @@ class IndexParam:
     IVFFLAT_ALGO_NAME = "ivf_flat"
     IVFSQ_ALGO_NAME = "ivf_sq8"
     IVFPQ_ALGO_NAME = "ivf_pq"
+    DAAT_ALGO_NAME = "daat"
 
     def __init__(
         self, index_name: str, field_name: str, index_type: Union[VecIndexType, str], **kwargs
@@ -57,6 +58,11 @@ class IndexParam:
         return self.index_type in [
             IndexParam.IVFPQ_ALGO_NAME,
         ]
+    
+    def is_index_type_sparse_vector(self):
+        return self.index_type in [
+            IndexParam.DAAT_ALGO_NAME,
+        ]
 
     def _get_vector_index_type_str(self):
         """Parse vector index type to string."""
@@ -71,6 +77,8 @@ class IndexParam:
                 return IndexParam.IVFSQ_ALGO_NAME
             elif self.index_type == VecIndexType.IVFPQ:
                 return IndexParam.IVFPQ_ALGO_NAME
+            elif self.index_type == VecIndexType.DAAT:
+                return IndexParam.DAAT_ALGO_NAME
             raise ValueError(f"unsupported vector index type: {self.index_type}")
         assert isinstance(self.index_type, str)
         index_type = self.index_type.lower()
@@ -80,6 +88,7 @@ class IndexParam:
             IndexParam.IVFFLAT_ALGO_NAME,
             IndexParam.IVFSQ_ALGO_NAME,
             IndexParam.IVFPQ_ALGO_NAME,
+            IndexParam.DAAT_ALGO_NAME,
         ]:
             raise ValueError(f"unsupported vector index type: {self.index_type}")
         return index_type
@@ -124,15 +133,19 @@ class IndexParam:
                     ob_params['ef_construction'] = params['efConstruction']
                 if 'efSearch' in params:
                     ob_params['ef_search'] = params['efSearch']
+        
+        if self.is_index_type_sparse_vector() and ob_params['distance'] != 'inner_product':
+            raise ValueError("Metric type should be 'inner_product' for sparse vector index.")
         return ob_params
 
     def param_str(self):
         """Parse vector index parameters to string."""
         ob_param = self._parse_kwargs()
         partial_str = ",".join([f"{k}={v}" for k, v in ob_param.items()])
-        if len(partial_str) > 0:
-            partial_str += ","
-        partial_str += f"type={self.index_type}"
+        if not self.is_index_type_sparse_vector():
+            if len(partial_str) > 0:
+                partial_str += ","
+            partial_str += f"type={self.index_type}"
         return partial_str
 
     def __iter__(self):

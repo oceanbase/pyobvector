@@ -45,7 +45,7 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
 
         self._re_key = _re_compile(
             r"  "
-            r"(?:(FULLTEXT|SPATIAL|VECTOR|(?P<type>\S+)) )?KEY"
+            r"(?:(FULLTEXT|SPATIAL|VECTOR|SPARSEVECTOR|(?P<type>\S+)) )?KEY"
             # r"(?:(?P<type>\S+) )?KEY"
             r"(?: +{iq}(?P<name>(?:{esc_fq}|[^{fq}])+){fq})?"
             r"(?: +USING +(?P<using_pre>\S+))?"
