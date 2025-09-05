@@ -2,6 +2,7 @@
 
 * ARRAY             An extended data type in SQLAlchemy for ObVecClient
 * VECTOR            An extended data type in SQLAlchemy for ObVecClient
+* SPARSE_VECTOR     An extended data type in SQLAlchemy for ObVecClient
 * VectorIndex       An extended index type in SQLAlchemy for ObVecClient
 * CreateVectorIndex Vector Index Creation statement clause
 * ObTable           Extension to Table for creating table with vector index
@@ -21,6 +22,7 @@
 """
 from .array import ARRAY
 from .vector import VECTOR
+from .sparse_vector import SPARSE_VECTOR
 from .geo_srid_point import POINT
 from .vector_index import VectorIndex, CreateVectorIndex
 from .ob_table import ObTable
@@ -34,6 +36,7 @@ from .match_against_func import MatchAgainst
 __all__ = [
     "ARRAY",
     "VECTOR",
+    "SPARSE_VECTOR",
     "POINT",
     "VectorIndex",
     "CreateVectorIndex",

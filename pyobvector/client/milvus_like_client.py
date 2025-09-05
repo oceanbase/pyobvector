@@ -340,7 +340,7 @@ class MilvusLikeClient(Client):
     def search(
         self,
         collection_name: str,
-        data: list,
+        data: Union[list, dict],
         anns_field: str,
         with_dist: bool = False,
         flter=None,
@@ -356,7 +356,7 @@ class MilvusLikeClient(Client):
         
         Args:
         :param collection_name (string) : collection name
-        :param data (list) : the vector data to search
+        :param data (list) : the vector/sparse_vector data to search
         :param anns_field (string) : which vector field to search
         :param with_dist (bool) : return result with distance
         :param flter : do ann search with filter
@@ -369,6 +369,9 @@ class MilvusLikeClient(Client):
         :return : A list of records, each record is a dict 
                 indicates a mapping from column_name to column value.
         """
+        if not (isinstance(data, list) or isinstance(data, dict)):
+            raise ValueError("'data' type must be in 'list'/'dict'")
+
         lower_metric_type_str = "l2"
         if search_params is not None:
             if "metric_type" in search_params:
@@ -401,15 +404,21 @@ class MilvusLikeClient(Client):
             columns = [table.c[column.name] for column in table.columns]
 
         if with_dist:
-            columns.append(distance_func(table.c[anns_field],
-                "[" + ",".join([str(np.float32(v)) for v in data]) + "]"))
+            if isinstance(data, list):
+                columns.append(distance_func(table.c[anns_field],
+                    "[" + ",".join([str(np.float32(v)) for v in data]) + "]"))
+            else:
+                columns.append(distance_func(table.c[anns_field], f"{data}"))
         stmt = select(*columns)
 
         if flter is not None:
             stmt = stmt.where(*flter)
-
-        stmt = stmt.order_by(distance_func(table.c[anns_field],
-            "[" + ",".join([str(np.float32(v)) for v in data]) + "]"))
+        
+        if isinstance(data, list):
+            stmt = stmt.order_by(distance_func(table.c[anns_field],
+                "[" + ",".join([str(np.float32(v)) for v in data]) + "]"))
+        else:
+            stmt = stmt.order_by(distance_func(table.c[anns_field], f"{data}"))
         stmt_str = (
             str(stmt.compile(
                 dialect=self.engine.dialect,

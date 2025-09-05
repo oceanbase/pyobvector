@@ -14,6 +14,7 @@ In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 * IndexParams           A list of IndexParam to create vector index in batch
 * DataType              Specify field type in collection schema for MilvusLikeClient
 * VECTOR                An extended data type in SQLAlchemy for ObVecClient
+* SPARSE_VECTOR         An extended data type in SQLAlchemy for ObVecClient
 * VectorIndex           An extended index type in SQLAlchemy for ObVecClient
 * FtsIndex              Full Text Search Index
 * FieldSchema           Clas to define field schema in collection for MilvusLikeClient
@@ -43,6 +44,7 @@ from .client import *
 from .schema import (
     ARRAY,
     VECTOR,
+    SPARSE_VECTOR,
     POINT,
     VectorIndex,
     OceanBaseDialect,
@@ -70,6 +72,7 @@ __all__ = [
     "DataType",
     "ARRAY",
     "VECTOR",
+    "SPARSE_VECTOR",
     "POINT",
     "VectorIndex",
     "FtsIndex",

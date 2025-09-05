@@ -4,6 +4,7 @@ from sqlalchemy.dialects.mysql import aiomysql, pymysql
 
 from .reflection import OceanBaseTableDefinitionParser
 from .vector import VECTOR
+from .sparse_vector import SPARSE_VECTOR
 from .geo_srid_point import POINT
 
 class OceanBaseDialect(pymysql.MySQLDialect_pymysql):
@@ -15,6 +16,7 @@ class OceanBaseDialect(pymysql.MySQLDialect_pymysql):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ischema_names["VECTOR"] = VECTOR
+        self.ischema_names["SPARSEVECTOR"] = SPARSE_VECTOR
         self.ischema_names["point"] = POINT
 
     @util.memoized_property
@@ -39,6 +41,7 @@ class AsyncOceanBaseDialect(aiomysql.MySQLDialect_aiomysql):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ischema_names["VECTOR"] = VECTOR
+        self.ischema_names["SPARSEVECTOR"] = SPARSE_VECTOR
         self.ischema_names["point"] = POINT
 
     @util.memoized_property
