@@ -47,6 +47,7 @@ jobs:
           container_name: 'ob435'
           mode: 'slim'
           datafile_size: '10G'
+          log_disk_size: '10G'
           init_sql: "ALTER SYSTEM ob_vector_memory_limit_percentage = 30; create user 'jtuser'@'%'; GRANT SELECT, INSERT, UPDATE, DELETE ON test.* TO 'jtuser'@'%'; FLUSH PRIVILEGES;"
 
       - name: Run tests
