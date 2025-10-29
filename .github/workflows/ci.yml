@@ -13,51 +13,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.x'
-        
-    - name: Install Poetry
-      run: |
-        pip install poetry
-        
-    - name: Install dependencies
-      run: |
-        poetry install
+      - name: Free disk space
+        uses: kfir4444/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
 
-    - name: Run Docker container
-      run: |
-        docker run --name ob435 -e MODE=slim -p 2881:2881 -d oceanbase/oceanbase-ce:4.3.5.3-103000092025080818
+      - name: Check out code
+        uses: actions/checkout@v4
 
-    - name: Wait for container to be ready
-      run: |
-        timeout=300
-        while [ $timeout -gt 0 ]; do
-          if docker logs ob435 | grep -q 'boot success!'; then
-            echo "Container is ready."
-            break
-          fi
-          sleep 5
-          timeout=$((timeout - 5))
-        done
-        if [ $timeout -le 0 ]; then
-          echo "Container did not start in time!"
-          exit 1
-        fi
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
 
-    - name: Execute Initialize SQL Command
-      env:
-        OCEANBASE_HOST: '127.0.0.1'
-        OCEANBASE_PORT: '2881'
-        OCEANBASE_USER: 'root@test'
-        OCEANBASE_PASS: ''
-      run: |
-        docker exec ob435 obclient -h $OCEANBASE_HOST -P $OCEANBASE_PORT -u $OCEANBASE_USER -p$OCEANBASE_PASS -e "ALTER SYSTEM ob_vector_memory_limit_percentage = 30; create user 'jtuser'@'%'; GRANT SELECT, INSERT, UPDATE, DELETE ON test.* TO 'jtuser'@'%'; FLUSH PRIVILEGES;"
+      - name: Install Poetry
+        run: |
+          pip install poetry
 
-    - name: Run tests
-      run: |
-        poetry run pytest --log-cli-level=INFO
+      - name: Install dependencies
+        run: |
+          poetry install
+
+      - name: Start OceanBase container
+        uses: oceanbase/setup-oceanbase-ce@v1
+        with:
+          image_name: 'oceanbase/oceanbase-ce'
+          image_tag: '4.3.5.3-103000092025080818'
+          container_name: 'ob435'
+          mode: 'mini'
+          datafile_size: '20G'
+          log_disk_size: '10G'
+          init_sql: "ALTER SYSTEM ob_vector_memory_limit_percentage = 30; create user 'jtuser'@'%'; GRANT SELECT, INSERT, UPDATE, DELETE ON test.* TO 'jtuser'@'%'; FLUSH PRIVILEGES;"
+
+      - name: Run tests
+        run: |
+          poetry run pytest --log-cli-level=INFO
