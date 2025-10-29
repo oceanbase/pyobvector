@@ -121,6 +121,7 @@ class ObClient:
         columns: List[Column],
         indexes: Optional[List[Index]] = None,
         partitions: Optional[ObPartition] = None,
+        **kwargs,
     ):
         """Create a table.
 
@@ -130,6 +131,7 @@ class ObClient:
             indexes (Optional[List[Index]]) : optional index schema
             partitions (Optional[ObPartition]) : optional partition strategy
         """
+        kwargs.setdefault("extend_existing", True)
         with self.engine.connect() as conn:
             with conn.begin():
                 if indexes is not None:
@@ -138,14 +140,14 @@ class ObClient:
                         self.metadata_obj,
                         *columns,
                         *indexes,
-                        extend_existing=True,
+                        **kwargs,
                     )
                 else:
                     table = ObTable(
                         table_name,
                         self.metadata_obj,
                         *columns,
-                        extend_existing=True,
+                        **kwargs,
                     )
                 table.create(self.engine, checkfirst=True)
                 # do partition

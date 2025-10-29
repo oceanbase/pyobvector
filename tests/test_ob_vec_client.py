@@ -198,7 +198,9 @@ class ObVecClientTest(unittest.TestCase):
             columns=[
                 Column("id", Integer, primary_key=True, autoincrement=True),
                 Column("name", String(64), nullable=True),
-            ]
+            ],
+            mysql_charset='utf8mb4',
+            mysql_collate='utf8mb4_unicode_ci',
         )
         self.client.perform_raw_text_sql(f"ALTER TABLE {test_collection_name} ADD COLUMN age INTEGER")
 
