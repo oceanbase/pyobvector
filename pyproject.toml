@@ -10,7 +10,7 @@ python = ">=3.9,<4.0"
 numpy = ">=1.17.0,<2.0.0"
 sqlalchemy = ">=1.4,<=3"
 pymysql = "^1.1.1"
-aiomysql = "^0.2.0"
+aiomysql = "^0.3.2"
 sqlglot = "^26.0.1"
 pydantic = ">=2.7.0,<3"
 
