@@ -271,6 +271,7 @@ class ObVecClient(ObClient):
         with_dist: bool = False,
         topk: int = 10,
         output_column_names: Optional[List[str]] = None,
+        output_columns: Optional[Union[List, tuple]] = None,
         extra_output_cols: Optional[List] = None,
         where_clause=None,
         partition_names: Optional[List[str]] = None,
@@ -287,6 +288,10 @@ class ObVecClient(ObClient):
             with_dist (bool) : return result with distance
             topk (int) : top K
             output_column_names (Optional[List[str]]) : output fields
+            output_columns (Optional[Union[List, tuple]]) : output columns as SQLAlchemy Column objects 
+                or expressions. Similar to SQLAlchemy's select() function arguments.
+                If provided, takes precedence over output_column_names.
+            extra_output_cols (Optional[List]) : additional output columns
             where_clause : do ann search with filter
             idx_name_hint : post-filtering enabled if vector index name is specified
                             Or pre-filtering enabled
@@ -296,7 +301,13 @@ class ObVecClient(ObClient):
 
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
 
-        if output_column_names is not None:
+        columns = []
+        if output_columns is not None:
+            if isinstance(output_columns, (list, tuple)):
+                columns = list(output_columns)
+            else:
+                columns = [output_columns]
+        elif output_column_names is not None:
             columns = [table.c[column_name] for column_name in output_column_names]
         else:
             columns = [table.c[column.name] for column in table.columns]

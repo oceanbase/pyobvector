@@ -1,7 +1,7 @@
 import json
 import unittest
 from pyobvector import *
-from sqlalchemy import Column, Integer, JSON, String, text
+from sqlalchemy import Column, Integer, JSON, String, text, Table
 from sqlalchemy import func
 import logging
 
@@ -76,6 +76,59 @@ class ObVecClientTest(unittest.TestCase):
             partition_names=["p0"],
         )
         self.assertEqual(set([r[0] for r in res.fetchall()]), set([12, 11, 10, 5, 7]))
+
+        # Additional tests: using output_columns parameter
+        table = Table(test_collection_name, self.client.metadata_obj, autoload_with=self.client.engine)
+        
+        # Test output_columns with Column objects
+        res = self.client.ann_search(
+            test_collection_name,
+            vec_data=[0, 0, 0],
+            vec_column_name="embedding",
+            distance_func=l2_distance,
+            with_dist=True,
+            topk=5,
+            output_columns=[table.c.id]
+        )
+        results = res.fetchall()
+        self.assertEqual(len(results), 5)
+        self.assertEqual(len(results[0]), 2)  # id, distance
+        self.assertEqual(set([r[0] for r in results]), set([112, 111, 10, 11, 12]))
+
+        # Test output_columns with SQLAlchemy expressions
+        res = self.client.ann_search(
+            test_collection_name,
+            vec_data=[0, 0, 0],
+            vec_column_name="embedding",
+            distance_func=l2_distance,
+            with_dist=True,
+            topk=5,
+            output_columns=[
+                table.c.id,
+                (table.c.id + 1000).label('id_plus_1000')
+            ]
+        )
+        results = res.fetchall()
+        self.assertEqual(len(results), 5)
+        self.assertEqual(len(results[0]), 3)  # id, id_plus_1000, distance
+        # Verify calculation results
+        for row in results:
+            self.assertEqual(row[1], row[0] + 1000)  # id_plus_1000 = id + 1000
+
+        # Test parameter priority - output_columns takes precedence over output_column_names
+        res = self.client.ann_search(
+            test_collection_name,
+            vec_data=[0, 0, 0],
+            vec_column_name="embedding",
+            distance_func=l2_distance,
+            with_dist=True,
+            topk=5,
+            output_column_names=["id"],  # This should be ignored
+            output_columns=[table.c.id, table.c.meta]  # This should be used
+        )
+        results = res.fetchall()
+        self.assertEqual(len(results), 5)
+        self.assertEqual(len(results[0]), 3)  # id, meta, distance
 
     def test_delete_get(self):
         test_collection_name = "ob_delete_get_test"

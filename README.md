@@ -153,18 +153,53 @@ client.insert(test_collection_name, data=data1)
 - do ann search:
 
 ```python
-# perform ann search
+# perform ann search with basic column selection
 res = self.client.ann_search(
     test_collection_name, 
     vec_data=[0,0,0], 
     vec_column_name='embedding',
     distance_func=l2_distance,
     topk=5,
-    output_column_names=['id']
+    output_column_names=['id']  # Legacy parameter
 )
 # For example, the result will be:
 # [(112,), (111,), (10,), (11,), (12,)]
+
+# perform ann search with SQLAlchemy expressions (recommended)
+from sqlalchemy import Table, text, func
+
+table = Table(test_collection_name, client.metadata_obj, autoload_with=client.engine)
+res = self.client.ann_search(
+    test_collection_name, 
+    vec_data=[0,0,0], 
+    vec_column_name='embedding',
+    distance_func=l2_distance,
+    topk=5,
+    output_columns=[
+        table.c.id,
+        table.c.meta,
+        (table.c.id + 1000).label('id_plus_1000'),
+        text("JSON_EXTRACT(meta, '$.key') as extracted_key")
+    ]
+)
+# For example, the result will be:
+# [(112, '{"key": "value"}', 1112, 'value'), ...]
 ```
+
+#### ann_search Parameters
+
+The `ann_search` method supports flexible output column selection through the `output_columns` parameter:
+
+- **`output_columns`** (recommended): Accepts SQLAlchemy Column objects, expressions, or a mix of both
+  - Column objects: `table.c.id`, `table.c.name`
+  - Expressions: `(table.c.age + 10).label('age_plus_10')`
+  - JSON queries: `text("JSON_EXTRACT(meta, '$.key') as extracted_key")`
+  - String functions: `func.concat(table.c.name, ' (', table.c.age, ')').label('name_age')`
+
+- **`output_column_names`** (legacy): Accepts list of column name strings
+  - Example: `['id', 'name', 'meta']`
+
+- **Parameter Priority**: `output_columns` takes precedence over `output_column_names` when both are provided
 
 - If you want to use pure `SQLAlchemy` API with `OceanBase` dialect, you can just get an `SQLAlchemy.engine` via `client.engine`. The engine can also be created as following:
 
