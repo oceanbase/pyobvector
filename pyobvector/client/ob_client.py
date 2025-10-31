@@ -107,10 +107,13 @@ class ObClient:
         )
 
     def check_table_exists(self, table_name: str):
-        """check if table exists.
+        """Check if table exists.
 
         Args:
-            table_name (string) : table name
+            table_name (string): table name
+
+        Returns:
+            bool: True if table exists, False otherwise
         """
         inspector = inspect(self.engine)
         return inspector.has_table(table_name)
@@ -126,10 +129,11 @@ class ObClient:
         """Create a table.
 
         Args:
-            table_name (string) : table name
-            columns (List[Column]) : column schema
-            indexes (Optional[List[Index]]) : optional index schema
-            partitions (Optional[ObPartition]) : optional partition strategy
+            table_name (string): table name
+            columns (List[Column]): column schema
+            indexes (Optional[List[Index]]): optional index schema
+            partitions (Optional[ObPartition]): optional partition strategy
+            **kwargs: additional keyword arguments
         """
         kwargs.setdefault("extend_existing", True)
         with self.engine.connect() as conn:
@@ -190,9 +194,9 @@ class ObClient:
         """Insert data into table.
 
         Args:
-            table_name (string) : table name
-            data (Union[Dict, List[Dict]]) : data that will be inserted
-            partition_name (Optional[str]) : limit the query to certain partition
+            table_name (string): table name
+            data (Union[Dict, List[Dict]]): data that will be inserted
+            partition_name (Optional[str]): limit the query to certain partition
         """
         if isinstance(data, Dict):
             data = [data]
@@ -222,9 +226,9 @@ class ObClient:
         """Update data in table. If primary key is duplicated, replace it.
 
         Args:
-            table_name (string) : table name
-            data (Union[Dict, List[Dict]]) : data that will be upserted
-            partition_name (Optional[str]) : limit the query to certain partition
+            table_name (string): table name
+            data (Union[Dict, List[Dict]]): data that will be upserted
+            partition_name (Optional[str]): limit the query to certain partition
         """
         if isinstance(data, Dict):
             data = [data]
@@ -254,10 +258,10 @@ class ObClient:
         """Update data in table.
 
         Args:
-            table_name (string) : table name
+            table_name (string): table name
             values_clause: update values clause
             where_clause: update with filter
-            partition_name (Optional[str]) : limit the query to certain partition
+            partition_name (Optional[str]): limit the query to certain partition
 
         Example:
             ... code-block:: python
@@ -300,10 +304,10 @@ class ObClient:
         """Delete data in table.
 
         Args:
-            table_name (string) : table name
+            table_name (string): table name
             ids (Optional[Union[list, str, int]]): ids of data to delete
-            where_clause : delete with filter
-            partition_name (Optional[str]) : limit the query to certain partition
+            where_clause: delete with filter
+            partition_name (Optional[str]): limit the query to certain partition
         """
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
         where_in_clause = None
@@ -345,14 +349,18 @@ class ObClient:
         partition_names: Optional[List[str]] = None,
         n_limits: Optional[int] = None,
     ):
-        """get records with specified primary field `ids`.
+        """Get records with specified primary field `ids`.
 
         Args:
-            table_name (string) : table name
-            ids : specified primary field values
-            where_clause : SQL filter
-            output_column_name (Optional[List[str]]) : output fields name
-            partition_names (List[str]) : limit the query to certain partitions
+            table_name (string): table name
+            ids (Optional[Union[list, str, int]]): specified primary field values
+            where_clause: SQL filter
+            output_column_name (Optional[List[str]]): output fields name
+            partition_names (Optional[List[str]]): limit the query to certain partitions
+            n_limits (Optional[int]): limit the number of results
+
+        Returns:
+            Result object from SQLAlchemy execution
         """
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
         if output_column_name is not None:

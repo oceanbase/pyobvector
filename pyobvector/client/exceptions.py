@@ -101,9 +101,9 @@ class ExceptionsMessage:
     )
     PrimaryFieldType = "Param primary_field must be int or str type."
     VectorFieldMissingDimParam = "Param 'dim' must be set for vector field."
-    VarcharFieldMissinglengthParam = "Param 'max_length' must be set for varchar field."
-    ArrayFiledMissingElementType = "Param 'element_type' must be set for array field."
-    ArrayFiledInvalidElementType = (
+    VarcharFieldMissingLengthParam = "Param 'max_length' must be set for varchar field."
+    ArrayFieldMissingElementType = "Param 'element_type' must be set for array field."
+    ArrayFieldInvalidElementType = (
         "Param 'element_type' can not be array/vector/varchar."
     )
     CollectionNotExists = "Collection does not exist."

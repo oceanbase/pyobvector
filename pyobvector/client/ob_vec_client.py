@@ -69,11 +69,12 @@ class ObVecClient(ObClient):
         """Create table with optional index_params.
 
         Args:
-            table_name (string) : table name
-            columns (List[Column]) : column schema
-            indexes (Optional[List[Index]]) : optional common index schema
-            vids (Optional[IndexParams]) : optional vector index schema
-            partitions (Optional[ObPartition]) : optional partition strategy
+            table_name (string): table name
+            columns (List[Column]): column schema
+            indexes (Optional[List[Index]]): optional common index schema
+            vidxs (Optional[IndexParams]): optional vector index schema
+            fts_idxs (Optional[List[FtsIndexParam]]): optional full-text search index schema
+            partitions (Optional[ObPartition]): optional partition strategy
         """
         sparse_vidxs = self._get_sparse_vector_index_params(vidxs)
         with self.engine.connect() as conn:
@@ -142,12 +143,12 @@ class ObVecClient(ObClient):
         """Create common index or vector index.
 
         Args:
-            table_name (string) : table name
-            is_vec_index (bool) : common index or vector index
-            index_name (string) : index name
-            column_names (List[string]) : create index on which columns
-            vidx_params (Optional[str]) :
-                vector index params, for example 'distance=l2, type=hnsw, lib=vsag'
+            table_name (string): table name
+            is_vec_index (bool): common index or vector index
+            index_name (string): index name
+            column_names (List[string]): create index on which columns
+            vidx_params (Optional[str]): vector index params, for example 'distance=l2, type=hnsw, lib=vsag'
+            **kw: additional keyword arguments
         """
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
         columns = [table.c[column_name] for column_name in column_names]
@@ -168,8 +169,8 @@ class ObVecClient(ObClient):
         """Create vector index with vector index parameter.
 
         Args:
-            table_name (string) : table name
-            vidx_param (IndexParam) : vector index parameter
+            table_name (string): table name
+            vidx_param (IndexParam): vector index parameter
         """
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
         with self.engine.connect() as conn:
@@ -189,8 +190,8 @@ class ObVecClient(ObClient):
         """Create fts index with fts index parameter.
         
         Args:
-            table_name (string) : table name
-            fts_idx_param (FtsIndexParam) : fts index parameter
+            table_name (string): table name
+            fts_idx_param (FtsIndexParam): fts index parameter
         """
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
         with self.engine.connect() as conn:
@@ -212,10 +213,9 @@ class ObVecClient(ObClient):
         """Refresh vector index for performance.
 
         Args:
-            table_name (string) : table name
-            index_name (string) : vector index name
-            trigger_threshold (int) :
-                If delta_buffer_table row count is greater than `trigger_threshold`,
+            table_name (string): table name
+            index_name (string): vector index name
+            trigger_threshold (int): If delta_buffer_table row count is greater than `trigger_threshold`,
                 refreshing is actually triggered.
         """
         with self.engine.connect() as conn:
@@ -236,9 +236,9 @@ class ObVecClient(ObClient):
         """Rebuild vector index for performance.
 
         Args:
-            table_name (string) : table name
-            index_name (string) : vector index name
-            trigger_threshold (float)
+            table_name (string): table name
+            index_name (string): vector index name
+            trigger_threshold (float): threshold value for rebuilding index
         """
         with self.engine.connect() as conn:
             with conn.begin():
@@ -278,23 +278,25 @@ class ObVecClient(ObClient):
         idx_name_hint: Optional[List[str]] = None,
         **kwargs,
     ):  # pylint: disable=unused-argument
-        """perform ann search.
+        """Perform ann search.
 
         Args:
-            table_name (string) : table name
-            vec_data (list/dict) : the vector/sparse_vector data to search
-            vec_column_name (string) : which vector field to search
-            distance_func : function to calculate distance between vectors
-            with_dist (bool) : return result with distance
-            topk (int) : top K
-            output_column_names (Optional[List[str]]) : output fields
-            output_columns (Optional[Union[List, tuple]]) : output columns as SQLAlchemy Column objects 
+            table_name (string): table name
+            vec_data (Union[list, dict]): the vector/sparse_vector data to search
+            vec_column_name (string): which vector field to search
+            distance_func: function to calculate distance between vectors
+            with_dist (bool): return result with distance
+            topk (int): top K
+            output_column_names (Optional[List[str]]): output fields
+            output_columns (Optional[Union[List, tuple]]): output columns as SQLAlchemy Column objects
                 or expressions. Similar to SQLAlchemy's select() function arguments.
                 If provided, takes precedence over output_column_names.
-            extra_output_cols (Optional[List]) : additional output columns
-            where_clause : do ann search with filter
-            idx_name_hint : post-filtering enabled if vector index name is specified
-                            Or pre-filtering enabled
+            extra_output_cols (Optional[List]): additional output columns
+            where_clause: do ann search with filter
+            partition_names (Optional[List[str]]): limit the query to certain partitions
+            idx_name_hint (Optional[List[str]]): post-filtering enabled if vector index name is specified
+                Or pre-filtering enabled
+            **kwargs: additional arguments
         """
         if not (isinstance(vec_data, list) or isinstance(vec_data, dict)):
             raise ValueError("'vec_data' type must be in 'list'/'dict'")
@@ -389,17 +391,21 @@ class ObVecClient(ObClient):
         str_list: Optional[List[str]] = None,
         **kwargs,
     ):  # pylint: disable=unused-argument
-        """perform post ann search.
+        """Perform post ann search.
 
         Args:
-            table_name (string) : table name
-            vec_data (list) : the vector data to search
-            vec_column_name (string) : which vector field to search
-            distance_func : function to calculate distance between vectors
-            with_dist (bool) : return result with distance
-            topk (int) : top K
-            output_column_names (Optional[List[str]]) : output fields
-            where_clause : do ann search with filter
+            table_name (string): table name
+            vec_data (list): the vector data to search
+            vec_column_name (string): which vector field to search
+            distance_func: function to calculate distance between vectors
+            with_dist (bool): return result with distance
+            topk (int): top K
+            output_column_names (Optional[List[str]]): output fields
+            extra_output_cols (Optional[List]): additional output columns
+            where_clause: do ann search with filter
+            partition_names (Optional[List[str]]): limit the query to certain partitions
+            str_list (Optional[List[str]]): list to append SQL string to
+            **kwargs: additional arguments
         """
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
 
@@ -462,16 +468,17 @@ class ObVecClient(ObClient):
         where_clause=None,
         **kwargs,
     ):  # pylint: disable=unused-argument
-        """perform precise vector search.
+        """Perform precise vector search.
 
         Args:
-            table_name (string) : table name
-            vec_data (list) : the vector data to search
-            vec_column_name (string) : which vector field to search
-            distance_func : function to calculate distance between vectors
-            topk (int) : top K
-            output_column_names (Optional[List[str]]) : output column names
-            where_clause : do ann search with filter
+            table_name (string): table name
+            vec_data (list): the vector data to search
+            vec_column_name (string): which vector field to search
+            distance_func: function to calculate distance between vectors
+            topk (int): top K
+            output_column_names (Optional[List[str]]): output column names
+            where_clause: do ann search with filter
+            **kwargs: additional arguments
         """
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
 

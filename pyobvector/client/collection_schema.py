@@ -79,14 +79,14 @@ class FieldSchema:
             if "max_length" not in self.kwargs:
                 raise VarcharFieldParamException(
                     code=ErrorCode.INVALID_ARGUMENT,
-                    message=ExceptionsMessage.VarcharFieldMissinglengthParam,
+                    message=ExceptionsMessage.VarcharFieldMissingLengthParam,
                 )
             self.type_params["length"] = self.kwargs["max_length"]
         elif self.dtype == DataType.ARRAY:
             if "element_type" not in self.kwargs:
                 raise ArrayFieldParamException(
                     code=ErrorCode.INVALID_ARGUMENT,
-                    message=ExceptionsMessage.ArrayFiledMissingElementType,
+                    message=ExceptionsMessage.ArrayFieldMissingElementType,
                 )
             if self.kwargs["element_type"] in (
                 DataType.ARRAY,
@@ -95,7 +95,7 @@ class FieldSchema:
             ):
                 raise ArrayFieldParamException(
                     code=ErrorCode.INVALID_ARGUMENT,
-                    message=ExceptionsMessage.ArrayFiledInvalidElementType,
+                    message=ExceptionsMessage.ArrayFieldInvalidElementType,
                 )
 
             self.type_params["item_type"] = convert_datatype_to_sqltype(
@@ -147,9 +147,9 @@ class CollectionSchema:
         """Add field to collection.
 
         Args:
-        :param field_name (string) : new field name
-        :param datatype (DataType) : field data type
-        :param kwargs : parameters for data type
+            field_name (string): new field name
+            datatype (DataType): field data type
+            **kwargs: parameters for data type
         """
         field = FieldSchema(field_name, datatype, **kwargs)
         cur_idx = len(self.fields)

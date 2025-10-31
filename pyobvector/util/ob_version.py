@@ -7,7 +7,7 @@ class ObVersion:
     """The class to describe OceanBase cluster version.
 
     Attributes:
-    version_nums (List[int]) : version number of OceanBase cluster. For example, '4.3.3.0'
+        version_nums (List[int]): version number of OceanBase cluster. For example, '4.3.3.0'
     """
     def __init__(self, version_nums: List[int]):
         self.version_nums = copy.deepcopy(version_nums)

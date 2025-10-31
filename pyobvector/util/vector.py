@@ -7,7 +7,7 @@ class Vector:
     """A transformer class between python numpy array and OceanBase VECTOR.
 
     Attributes:
-    _value (numpy.array) : a numpy array
+        _value (numpy.array): a numpy array
     """
     def __init__(self, value):
         # big-endian float32
@@ -43,7 +43,10 @@ class Vector:
         """Construct Vector class with list string.
 
         Args:
-            value: For example, '[1,2,3]'
+            value (str): For example, '[1,2,3]'
+
+        Returns:
+            Vector: Vector instance
         """
         return cls([float(v) for v in value[1:-1].split(",")])
 
@@ -52,7 +55,10 @@ class Vector:
         """Construct Vector class with raw bytes.
 
         Args:
-            value: the bytes of python list
+            value (bytes): the bytes of python list
+
+        Returns:
+            Vector: Vector instance
         """
         return cls(json.loads(value.decode()))
 
@@ -78,4 +84,4 @@ class Vector:
             return cls.from_text(value).to_numpy().astype(np.float32)
         if isinstance(value, bytes):
             return cls.from_bytes(value).to_numpy().astype(np.float32)
-        raise ValueError("unexpect vector type")
+        raise ValueError("unexpected vector type")
