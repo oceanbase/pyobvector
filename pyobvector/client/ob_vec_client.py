@@ -276,6 +276,7 @@ class ObVecClient(ObClient):
         where_clause=None,
         partition_names: Optional[List[str]] = None,
         idx_name_hint: Optional[List[str]] = None,
+        distance_threshold: Optional[float] = None,
         **kwargs,
     ):  # pylint: disable=unused-argument
         """Perform ann search.
@@ -296,25 +297,30 @@ class ObVecClient(ObClient):
             partition_names (Optional[List[str]]): limit the query to certain partitions
             idx_name_hint (Optional[List[str]]): post-filtering enabled if vector index name is specified
                 Or pre-filtering enabled
+            distance_threshold (Optional[float]): filter results where distance <= threshold.
+                Only effective when with_dist=True.
             **kwargs: additional arguments
         """
         if not (isinstance(vec_data, list) or isinstance(vec_data, dict)):
             raise ValueError("'vec_data' type must be in 'list'/'dict'")
 
+        if distance_threshold is not None and not with_dist:
+            raise ValueError("'distance_threshold' requires 'with_dist=True' to be effective")
+
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
 
         columns = []
-        if output_columns is not None:
+        if output_columns is not None and output_columns:
             if isinstance(output_columns, (list, tuple)):
                 columns = list(output_columns)
             else:
                 columns = [output_columns]
-        elif output_column_names is not None:
+        elif output_column_names is not None and output_column_names:
             columns = [table.c[column_name] for column_name in output_column_names]
         else:
             columns = [table.c[column.name] for column in table.columns]
 
-        if extra_output_cols is not None:
+        if extra_output_cols is not None and extra_output_cols:
             columns.extend(extra_output_cols)
 
         if with_dist:
@@ -370,11 +376,41 @@ class ObVecClient(ObClient):
                     stmt_str = f"SELECT /*+ index({table_name} {idx_name_hint}) */ " + stmt_str[idx + len("SELECT "):]
 
                 if partition_names is None:
-                    return conn.execute(text(stmt_str))
-                stmt_str = self._insert_partition_hint_for_query_sql(
-                    stmt_str, f"PARTITION({', '.join(partition_names)})"
-                )
-                return conn.execute(text(stmt_str))
+                    result = conn.execute(text(stmt_str))
+                else:
+                    stmt_str = self._insert_partition_hint_for_query_sql(
+                        stmt_str, f"PARTITION({', '.join(partition_names)})"
+                    )
+                    result = conn.execute(text(stmt_str))
+
+                if distance_threshold is not None and with_dist:
+                    filtered_rows = []
+                    for row in result:
+                        distance = row[-1]
+                        if distance <= distance_threshold:
+                            filtered_rows.append(row)
+                    
+                    class FilteredResult:
+                        def __init__(self, rows):
+                            self._rows = rows
+                            self._index = 0
+
+                        def fetchall(self):
+                            return self._rows
+
+                        def fetchone(self):
+                            if self._index < len(self._rows):
+                                row = self._rows[self._index]
+                                self._index += 1
+                                return row
+                            return None
+
+                        def __iter__(self):
+                            return iter(self._rows)
+
+                    return FilteredResult(filtered_rows)
+
+                return result
 
     def post_ann_search(
         self,
