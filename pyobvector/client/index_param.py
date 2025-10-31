@@ -178,10 +178,10 @@ class IndexParams:
         """Add `IndexParam` to `IndexParams`
         
         Args:
-        :param field_name (string) : vector index built on which field
-        :param index_type (VecIndexType) :
-                vector index algorithms (Only HNSW supported)
-        :param index_name (string) : vector index name
+            field_name (string): vector index built on which field
+            index_type (VecIndexType): vector index algorithms (Only HNSW supported)
+            index_name (string): vector index name
+            **kwargs: additional parameters for different index types
         """
         index_param = IndexParam(index_name, field_name, index_type, **kwargs)
         pair_key = (field_name, index_name)

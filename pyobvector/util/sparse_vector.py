@@ -45,4 +45,4 @@ class SparseVector:
 
         if isinstance(value, str):
             return cls.from_text(value)._value
-        raise ValueError(f"unexpects sparse vector type: {type(value)}")
+        raise ValueError(f"unexpected sparse vector type: {type(value)}")

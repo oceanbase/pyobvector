@@ -9,7 +9,7 @@ class CreateVectorIndex(DDLElement):
     """A new statement clause to create vector index.
     
     Attributes:
-    index : vector index schema
+        index: vector index schema
     """
     def __init__(self, index):
         self.index = index

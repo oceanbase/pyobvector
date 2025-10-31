@@ -18,13 +18,12 @@ class FtsIndexParam:
         self.field_names = field_names
         self.parser_type = parser_type
 
-    def param_str(self) -> str:
-        if self.parser_type is None:
-            return None
+    def param_str(self) -> str | None:
         if self.parser_type == FtsParser.IK:
             return "ik"
         if self.parser_type == FtsParser.NGRAM:
             return "ngram"
+        return None
 
     def __iter__(self):
         yield "index_name", self.index_name
