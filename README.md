@@ -27,6 +27,10 @@ mkdir build
 make html
 ```
 
+## Release Notes
+
+For detailed release notes and changelog, see [RELEASE_NOTES.md](RELEASE_NOTES.md).
+
 ## Usage
 
 `pyobvector` supports two modes:
