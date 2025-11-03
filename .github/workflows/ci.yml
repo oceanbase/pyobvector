@@ -11,6 +11,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sqlglot-version: [ "26.0.1", "27.10.0" ]
 
     steps:
       - name: Free disk space
@@ -37,6 +40,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          poetry add sqlglot==${{ matrix.sqlglot-version }}
           poetry install
 
       - name: Start OceanBase container
