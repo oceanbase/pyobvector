@@ -276,6 +276,7 @@ class ObVecClient(ObClient):
         where_clause=None,
         partition_names: Optional[List[str]] = None,
         idx_name_hint: Optional[List[str]] = None,
+        distance_threshold: Optional[float] = None,
         **kwargs,
     ):  # pylint: disable=unused-argument
         """Perform ann search.
@@ -296,6 +297,7 @@ class ObVecClient(ObClient):
             partition_names (Optional[List[str]]): limit the query to certain partitions
             idx_name_hint (Optional[List[str]]): post-filtering enabled if vector index name is specified
                 Or pre-filtering enabled
+            distance_threshold (Optional[float]): filter results where distance <= threshold.
             **kwargs: additional arguments
         """
         if not (isinstance(vec_data, list) or isinstance(vec_data, dict)):
@@ -304,17 +306,17 @@ class ObVecClient(ObClient):
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
 
         columns = []
-        if output_columns is not None:
+        if output_columns:
             if isinstance(output_columns, (list, tuple)):
                 columns = list(output_columns)
             else:
                 columns = [output_columns]
-        elif output_column_names is not None:
+        elif output_column_names:
             columns = [table.c[column_name] for column_name in output_column_names]
         else:
             columns = [table.c[column.name] for column in table.columns]
 
-        if extra_output_cols is not None:
+        if extra_output_cols:
             columns.extend(extra_output_cols)
 
         if with_dist:
@@ -342,6 +344,19 @@ class ObVecClient(ObClient):
 
         if where_clause is not None:
             stmt = stmt.where(*where_clause)
+
+        # Add distance threshold filter in SQL WHERE clause
+        if distance_threshold is not None:
+            if isinstance(vec_data, list):
+                dist_expr = distance_func(
+                    table.c[vec_column_name],
+                    "[" + ",".join([str(np.float32(v)) for v in vec_data]) + "]",
+                )
+            else:
+                dist_expr = distance_func(
+                    table.c[vec_column_name], f"{vec_data}"
+                )
+            stmt = stmt.where(dist_expr <= distance_threshold)
 
         if isinstance(vec_data, list):
             stmt = stmt.order_by(

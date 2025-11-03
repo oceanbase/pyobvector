@@ -110,10 +110,10 @@ class ObVecClientTest(unittest.TestCase):
         )
         results = res.fetchall()
         self.assertEqual(len(results), 5)
-        self.assertEqual(len(results[0]), 3)  # id, id_plus_1000, distance
+        self.assertEqual(len(results[0]), 3)
         # Verify calculation results
         for row in results:
-            self.assertEqual(row[1], row[0] + 1000)  # id_plus_1000 = id + 1000
+            self.assertEqual(row[1], row[0] + 1000)  
 
         # Test parameter priority - output_columns takes precedence over output_column_names
         res = self.client.ann_search(
@@ -123,12 +123,47 @@ class ObVecClientTest(unittest.TestCase):
             distance_func=l2_distance,
             with_dist=True,
             topk=5,
-            output_column_names=["id"],  # This should be ignored
-            output_columns=[table.c.id, table.c.meta]  # This should be used
+            output_column_names=["id"],
+            output_columns=[table.c.id, table.c.meta]
         )
         results = res.fetchall()
         self.assertEqual(len(results), 5)
-        self.assertEqual(len(results[0]), 3)  # id, meta, distance
+        self.assertEqual(len(results[0]), 3)
+        
+        res = self.client.ann_search(
+            test_collection_name,
+            vec_data=[0, 0, 0],
+            vec_column_name="embedding",
+            distance_func=l2_distance,
+            with_dist=True,
+            topk=10,
+            output_column_names=["id"],
+            distance_threshold=0.0,
+        )
+        results = res.fetchall()
+        self.assertEqual(len(results), 5)
+
+        # Verify all results have distance = 0.0
+        for row in results:
+            distance = row[-1]
+            self.assertEqual(distance, 0.0)
+            self.assertIn(row[0], [112, 111, 10, 11, 12])
+
+        res = self.client.ann_search(
+            test_collection_name,
+            vec_data=[0.748479, 0.276979, 0.555195],
+            vec_column_name="embedding",
+            distance_func=l2_distance,
+            with_dist=True,
+            topk=10,
+            output_column_names=["id"],
+            distance_threshold=0.5,
+        )
+        results = res.fetchall()
+        # Verify all results have distance <= 0.5
+        for row in results:
+            distance = row[-1]
+            self.assertLessEqual(distance, 0.5)
 
     def test_delete_get(self):
         test_collection_name = "ob_delete_get_test"

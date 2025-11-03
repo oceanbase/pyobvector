@@ -184,6 +184,21 @@ res = self.client.ann_search(
 )
 # For example, the result will be:
 # [(112, '{"key": "value"}', 1112, 'value'), ...]
+
+# perform ann search with distance threshold (filter results by distance)
+res = self.client.ann_search(
+    test_collection_name, 
+    vec_data=[0,0,0], 
+    vec_column_name='embedding',
+    distance_func=l2_distance,
+    with_dist=True,
+    topk=10,
+    output_column_names=['id'],
+    distance_threshold=0.5  # Only return results where distance <= 0.5
+)
+# Only returns results with distance <= 0.5
+# For example, the result will be:
+# [(10, 0.0), (11, 0.0), ...]  # Only includes results with distance <= 0.5
 ```
 
 #### ann_search Parameters
@@ -200,6 +215,12 @@ The `ann_search` method supports flexible output column selection through the `o
   - Example: `['id', 'name', 'meta']`
 
 - **Parameter Priority**: `output_columns` takes precedence over `output_column_names` when both are provided
+
+- **`distance_threshold`** (optional): Filter results by distance threshold
+  - Type: `Optional[float]`
+  - Only returns results where `distance <= threshold`
+  - Example: `distance_threshold=0.5` returns only results with distance <= 0.5
+  - Use case: Quality control for similarity search, only return highly similar results
 
 - If you want to use pure `SQLAlchemy` API with `OceanBase` dialect, you can just get an `SQLAlchemy.engine` via `client.engine`. The engine can also be created as following:
 
