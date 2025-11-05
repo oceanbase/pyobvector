@@ -111,5 +111,5 @@ class ExceptionsMessage:
     MetricTypeValueInvalid = "MetricType should be 'l2'/'ip'/'neg_ip'/'cosine' in ann search."
     UsingInIDsWhenMultiPrimaryKey = "Using 'ids' when table has multi primary key."
     ClusterVersionIsLow = (
-        "OceanBase Vector Store is not supported because cluster version is below 4.3.3.0."
+        "OceanBase %s feature is not supported because cluster version is below %s."
     )

@@ -44,7 +44,7 @@ class ObVecClient(ObClient):
         if self.ob_version < ObVersion.from_db_version_nums(4, 3, 3, 0):
             raise ClusterVersionException(
                 code=ErrorCode.NOT_SUPPORTED,
-                message=ExceptionsMessage.ClusterVersionIsLow,
+                message=ExceptionsMessage.ClusterVersionIsLow % ("Vector Store", "4.3.3.0"),
             )
 
     def _get_sparse_vector_index_params(
