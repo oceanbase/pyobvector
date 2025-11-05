@@ -15,8 +15,10 @@ jobs:
       matrix:
         include:
           - image_tag: "4.3.5.3-103000092025080818"
+            init_sql: "ALTER SYSTEM ob_vector_memory_limit_percentage = 30; CREATE USER 'jtuser'@'%'; GRANT SELECT, INSERT, UPDATE, DELETE ON test.* TO 'jtuser'@'%'; FLUSH PRIVILEGES;"
             test_filter: "-k \"not HybridSearchTest\""
           - image_tag: "4.4.1.0-100000032025101610"
+            init_sql: "ALTER SYSTEM ob_vector_memory_limit_percentage = 30; SET GLOBAL ob_query_timeout=100000000;"
             test_filter: "tests/test_hybrid_search.py::HybridSearchTest"
 
     steps:
@@ -55,7 +57,7 @@ jobs:
           mode: 'mini'
           datafile_size: '20G'
           log_disk_size: '10G'
-          init_sql: "ALTER SYSTEM ob_vector_memory_limit_percentage = 30; create user 'jtuser'@'%'; GRANT SELECT, INSERT, UPDATE, DELETE ON test.* TO 'jtuser'@'%'; FLUSH PRIVILEGES;"
+          init_sql: ${{ matrix.init_sql }}
 
       - name: Run tests
         run: |
