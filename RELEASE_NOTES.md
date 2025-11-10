@@ -2,6 +2,13 @@
 
 This file documents all released versions and their notable changes for the pyobvector project. Changes are grouped by version and categorized as Added (new features), Changed (modifications), Fixed (bug fixes), and Security (security updates).
 
+## [0.2.19](https://github.com/oceanbase/pyobvector/compare/release-v0.2.18...release-v0.2.19) - 2025-11-10
+
+### Added
+- Add SeekDB version check
+- Docs: add hybrid search documentation
+
+
 ## [0.2.18](https://github.com/oceanbase/pyobvector/compare/release-v0.2.17...release-v0.2.18) - 2025-11-05
 
 ### Added
