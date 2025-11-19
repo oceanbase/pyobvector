@@ -134,8 +134,11 @@ class IndexParam:
                 if 'efSearch' in params:
                     ob_params['ef_search'] = params['efSearch']
         
-        if self.is_index_type_sparse_vector() and ob_params['distance'] != 'inner_product':
-            raise ValueError("Metric type should be 'inner_product' for sparse vector index.")
+        if self.is_index_type_sparse_vector():
+            if ob_params['distance'] != 'inner_product':
+                raise ValueError("Metric type should be 'inner_product' for sparse vector index.")
+            if 'sparse_index_type' in self.kwargs:
+                ob_params['type'] = self.kwargs['sparse_index_type']
         return ob_params
 
     def param_str(self):
