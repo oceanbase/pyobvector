@@ -817,11 +817,12 @@ class ObVecJsonTableClient(ObVecClient):
     ):
         real_user_id = opt_user_id or self.user_id
 
-        table_name = ast.args['from'].this.this.this
+        from_key = 'from_' if 'from_' in ast.args else 'from'
+        table_name = ast.args[from_key].this.this.this
         if not self._check_table_exists(table_name):
             raise ValueError(f"Table {table_name} does not exists")
         
-        ast.args['from'].args['this'].args['this'] = to_identifier(name=JSON_TABLE_DATA_TABLE_NAME, quoted=False)
+        ast.args[from_key].args['this'].args['this'] = to_identifier(name=JSON_TABLE_DATA_TABLE_NAME, quoted=False)
 
         col_meta = self.jmetadata.meta_cache[table_name]
         json_table_meta_str = []

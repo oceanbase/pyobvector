@@ -30,13 +30,9 @@ class HybridSearch(Client):
         
         if self.ob_version < min_required_version:
             # For versions < 4.4.1.0, check if it's SeekDB
-            with self.engine.connect() as conn:
-                with conn.begin():
-                    res = conn.execute(text("SELECT version()"))
-                    version_str = [r[0] for r in res][0]
-                    if "SeekDB" in version_str:
-                        logger.info(f"SeekDB detected in version string: {version_str}, allowing hybrid search")
-                        return
+            if self._is_seekdb():
+                logger.info("SeekDB detected, allowing hybrid search")
+                return
             raise ClusterVersionException(
                 code=ErrorCode.NOT_SUPPORTED,
                 message=ExceptionsMessage.ClusterVersionIsLow % ("Hybrid Search", "4.4.1.0"),

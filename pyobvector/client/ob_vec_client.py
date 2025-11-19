@@ -99,7 +99,11 @@ class ObVecClient(ObClient):
                     create_table_sql = str(CreateTable(table).compile(self.engine))
                     new_sql = create_table_sql[:create_table_sql.rfind(')')]
                     for sparse_vidx in sparse_vidxs:
-                        new_sql += f",\n\tVECTOR INDEX {sparse_vidx.index_name}({sparse_vidx.field_name}) with (distance=inner_product)"
+                        sparse_params = sparse_vidx._parse_kwargs()
+                        if 'type' in sparse_params:
+                            new_sql += f",\n\tVECTOR INDEX {sparse_vidx.index_name}({sparse_vidx.field_name}) with (type={sparse_params['type']}, distance=inner_product)"
+                        else:
+                            new_sql += f",\n\tVECTOR INDEX {sparse_vidx.index_name}({sparse_vidx.field_name}) with (distance=inner_product)"
                     new_sql += "\n)"
                     conn.execute(text(new_sql))
                 else:
