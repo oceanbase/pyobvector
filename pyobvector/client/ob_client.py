@@ -93,6 +93,26 @@ class ObClient:
             self.metadata_obj.clear()
             self.metadata_obj.reflect(bind=self.engine, extend_existing=True)
 
+    def _is_seekdb(self) -> bool:
+        """Check if the database is SeekDB by querying version.
+        
+        Returns:
+            bool: True if database is SeekDB, False otherwise
+        """
+        is_seekdb = False
+        try:
+            if hasattr(self, '_is_seekdb_cached'):
+                return self._is_seekdb_cached
+            with self.engine.connect() as conn:
+                result = conn.execute(text("SELECT VERSION()"))
+                version_str = [r[0] for r in result][0]
+                is_seekdb = "SeekDB" in version_str
+                self._is_seekdb_cached = is_seekdb
+                logger.debug(f"Version query result: {version_str}, is_seekdb: {is_seekdb}")
+        except Exception as e:
+            logger.warning(f"Failed to query version: {e}")
+        return is_seekdb
+
     def _insert_partition_hint_for_query_sql(self, sql: str, partition_hint: str):
         from_index = sql.find("FROM")
         assert from_index != -1
