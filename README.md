@@ -15,7 +15,7 @@ poetry install
 - install with pip:
 
 ```shell
-pip install pyobvector==0.2.19
+pip install pyobvector==0.2.20
 ```
 
 ## Build Doc
@@ -211,17 +211,17 @@ res = self.client.ann_search(
 The `ann_search` method supports flexible output column selection through the `output_columns` parameter:
 
 - **`output_columns`** (recommended): Accepts SQLAlchemy Column objects, expressions, or a mix of both
-
+  
   - Column objects: `table.c.id`, `table.c.name`
   - Expressions: `(table.c.age + 10).label('age_plus_10')`
   - JSON queries: `text("JSON_EXTRACT(meta, '$.key') as extracted_key")`
   - String functions: `func.concat(table.c.name, ' (', table.c.age, ')').label('name_age')`
 - **`output_column_names`** (legacy): Accepts list of column name strings
-
+  
   - Example: `['id', 'name', 'meta']`
 - **Parameter Priority**: `output_columns` takes precedence over `output_column_names` when both are provided
 - **`distance_threshold`** (optional): Filter results by distance threshold
-
+  
   - Type: `Optional[float]`
   - Only returns results where `distance <= threshold`
   - Example: `distance_threshold=0.5` returns only results with distance <= 0.5
@@ -430,3 +430,4 @@ You can also get the actual SQL that will be executed:
 sql = client.get_sql(index=test_table_name, body=body)
 print(sql)  # prints the SQL query
 ```
+
