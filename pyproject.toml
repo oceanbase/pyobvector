@@ -4,6 +4,12 @@ version = "0.2.20"
 description = "A python SDK for OceanBase Vector Store, based on SQLAlchemy, compatible with Milvus API."
 authors = ["shanhaikang.shk <shanhaikang.shk@oceanbase.com>"]
 readme = "README.md"
+license = "Apache-2.0"
+keywords = ["oceanbase", "vector store", "obvector"]
+
+[project.urls]
+Homepage = "https://github.com/oceanbase/pyobvector"
+Repository = "https://github.com/oceanbase/pyobvector.git"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
