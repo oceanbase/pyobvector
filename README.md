@@ -9,7 +9,7 @@ A python SDK for OceanBase Multimodal Store (Vector Store / Full Text Search / J
 - git clone this repo, then install with:
 
 ```shell
-poetry install
+uv sync
 ```
 
 - install with pip:
