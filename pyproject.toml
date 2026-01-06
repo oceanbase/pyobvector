@@ -21,7 +21,7 @@ dependencies = [
 Homepage = "https://github.com/oceanbase/pyobvector"
 Repository = "https://github.com/oceanbase/pyobvector.git"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.2.2",
     "pylint>=3.2.7"
