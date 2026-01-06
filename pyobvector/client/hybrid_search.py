@@ -1,7 +1,7 @@
 """OceanBase Hybrid Search Client."""
 import json
 import logging
-from typing import Dict, Any
+from typing import Any
 
 from sqlalchemy import text
 
@@ -41,7 +41,7 @@ class HybridSearch(Client):
     def search(
         self,
         index: str,
-        body: Dict[str, Any],
+        body: dict[str, Any],
         **kwargs,
     ):
         """Execute hybrid search with parameter compatible with Elasticsearch.
@@ -66,7 +66,7 @@ class HybridSearch(Client):
     def get_sql(
         self,
         index: str,
-        body: Dict[str, Any],
+        body: dict[str, Any],
     ) -> str:
         """Get the SQL actually to be executed in hybrid search.
 

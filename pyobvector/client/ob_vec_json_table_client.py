@@ -1,18 +1,16 @@
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Any, Union
+from typing import Optional, Union
 
 from sqlalchemy import Column, Integer, String, JSON, Engine, select, text, func, CursorResult
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlglot import parse_one, exp, Expression, to_identifier
-from sqlglot.expressions import Concat
 
 
 from .ob_vec_client import ObVecClient
 from ..json_table import (
-    OceanBase,
     ChangeColumn,
     JsonTableBool,
     JsonTableTimestamp,
@@ -58,7 +56,7 @@ class ObVecJsonTableClient(ObVecClient):
     class JsonTableMetadata: 
         def __init__(self, user_id: str):
             self.user_id = user_id
-            self.meta_cache: Dict[str, List] = {}
+            self.meta_cache: dict[str, list] = {}
 
         @classmethod
         def _parse_col_type(cls, col_type: str):
@@ -319,7 +317,7 @@ class ObVecJsonTableClient(ObVecClient):
     def _check_table_exists(self, jtable_name: str) -> bool:
         return jtable_name in self.jmetadata.meta_cache
     
-    def _check_col_exists(self, jtable_name: str, col_name: str) -> Optional[Dict]:
+    def _check_col_exists(self, jtable_name: str, col_name: str) -> Optional[dict]:
         if not self._check_table_exists(jtable_name):
             return None
         for col_meta in self.jmetadata.meta_cache[jtable_name]:
@@ -339,7 +337,7 @@ class ObVecJsonTableClient(ObVecClient):
             col_type_str += '(' + ','.join(col_type_params_list) + ')'
         return col_type_str
     
-    def _parse_col_constraints(self, expr: Expression) -> Dict:
+    def _parse_col_constraints(self, expr: Expression) -> dict:
         col_has_default = False
         col_nullable = True
         for cons in expr:

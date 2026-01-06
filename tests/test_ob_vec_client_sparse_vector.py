@@ -1,8 +1,6 @@
-import json
 import unittest
 from pyobvector import *
-from sqlalchemy import Column, Integer, JSON, String, text, Table
-from sqlalchemy import func
+from sqlalchemy import Column, Integer, String, text, Table
 import logging
 
 logger = logging.getLogger(__name__)

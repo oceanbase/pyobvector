@@ -1,6 +1,6 @@
 """FieldSchema & CollectionSchema definition module to be compatible with Milvus."""
 import copy
-from typing import Optional, List
+from typing import Optional
 from sqlalchemy import Column
 from .schema_type import DataType, convert_datatype_to_sqltype
 from .exceptions import *
@@ -125,7 +125,7 @@ class CollectionSchema:
     """
     def __init__(
         self,
-        fields: Optional[List[FieldSchema]] = None,
+        fields: Optional[list[FieldSchema]] = None,
         partitions: Optional[ObPartition] = None,
         description: str = "",  # ignored in oceanbase
         **kwargs,

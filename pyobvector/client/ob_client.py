@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Dict, Union
+from typing import Optional, Union
 from urllib.parse import quote
 
 import sqlalchemy.sql.functions as func_mod
@@ -141,8 +141,8 @@ class ObClient:
     def create_table(
         self,
         table_name: str,
-        columns: List[Column],
-        indexes: Optional[List[Index]] = None,
+        columns: list[Column],
+        indexes: Optional[list[Index]] = None,
         partitions: Optional[ObPartition] = None,
         **kwargs,
     ):
@@ -208,7 +208,7 @@ class ObClient:
     def insert(
         self,
         table_name: str,
-        data: Union[Dict, List[Dict]],
+        data: Union[dict, list[dict]],
         partition_name: Optional[str] = "",
     ):
         """Insert data into table.
@@ -218,7 +218,7 @@ class ObClient:
             data (Union[Dict, List[Dict]]): data that will be inserted
             partition_name (Optional[str]): limit the query to certain partition
         """
-        if isinstance(data, Dict):
+        if isinstance(data, dict):
             data = [data]
 
         if len(data) == 0:
@@ -240,7 +240,7 @@ class ObClient:
     def upsert(
         self,
         table_name: str,
-        data: Union[Dict, List[Dict]],
+        data: Union[dict, list[dict]],
         partition_name: Optional[str] = "",
     ):
         """Update data in table. If primary key is duplicated, replace it.
@@ -250,7 +250,7 @@ class ObClient:
             data (Union[Dict, List[Dict]]): data that will be upserted
             partition_name (Optional[str]): limit the query to certain partition
         """
-        if isinstance(data, Dict):
+        if isinstance(data, dict):
             data = [data]
 
         if len(data) == 0:
@@ -365,8 +365,8 @@ class ObClient:
         table_name: str,
         ids: Optional[Union[list, str, int]] = None,
         where_clause=None,
-        output_column_name: Optional[List[str]] = None,
-        partition_names: Optional[List[str]] = None,
+        output_column_name: Optional[list[str]] = None,
+        partition_names: Optional[list[str]] = None,
         n_limits: Optional[int] = None,
     ):
         """Get records with specified primary field `ids`.

@@ -1,6 +1,6 @@
 """OceanBase Vector Store Client."""
 import logging
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 from sqlalchemy import (
@@ -60,10 +60,10 @@ class ObVecClient(ObClient):
     def create_table_with_index_params(
         self,
         table_name: str,
-        columns: List[Column],
-        indexes: Optional[List[Index]] = None,
+        columns: list[Column],
+        indexes: Optional[list[Index]] = None,
         vidxs: Optional[IndexParams] = None,
-        fts_idxs: Optional[List[FtsIndexParam]] = None,
+        fts_idxs: Optional[list[FtsIndexParam]] = None,
         partitions: Optional[ObPartition] = None,
     ):
         """Create table with optional index_params.
@@ -140,7 +140,7 @@ class ObVecClient(ObClient):
         table_name: str,
         is_vec_index: bool,
         index_name: str,
-        column_names: List[str],
+        column_names: list[str],
         vidx_params: Optional[str] = None,
         **kw,
     ):
@@ -274,12 +274,12 @@ class ObVecClient(ObClient):
         distance_func,
         with_dist: bool = False,
         topk: int = 10,
-        output_column_names: Optional[List[str]] = None,
-        output_columns: Optional[Union[List, tuple]] = None,
-        extra_output_cols: Optional[List] = None,
+        output_column_names: Optional[list[str]] = None,
+        output_columns: Optional[Union[list, tuple]] = None,
+        extra_output_cols: Optional[list] = None,
         where_clause=None,
-        partition_names: Optional[List[str]] = None,
-        idx_name_hint: Optional[List[str]] = None,
+        partition_names: Optional[list[str]] = None,
+        idx_name_hint: Optional[list[str]] = None,
         distance_threshold: Optional[float] = None,
         **kwargs,
     ):  # pylint: disable=unused-argument
@@ -403,11 +403,11 @@ class ObVecClient(ObClient):
         distance_func,
         with_dist: bool = False,
         topk: int = 10,
-        output_column_names: Optional[List[str]] = None,
-        extra_output_cols: Optional[List] = None,
+        output_column_names: Optional[list[str]] = None,
+        extra_output_cols: Optional[list] = None,
         where_clause=None,
-        partition_names: Optional[List[str]] = None,
-        str_list: Optional[List[str]] = None,
+        partition_names: Optional[list[str]] = None,
+        str_list: Optional[list[str]] = None,
         **kwargs,
     ):  # pylint: disable=unused-argument
         """Perform post ann search.
@@ -483,7 +483,7 @@ class ObVecClient(ObClient):
         vec_column_name: str,
         distance_func,
         topk: int = 10,
-        output_column_names: Optional[List[str]] = None,
+        output_column_names: Optional[list[str]] = None,
         where_clause=None,
         **kwargs,
     ):  # pylint: disable=unused-argument

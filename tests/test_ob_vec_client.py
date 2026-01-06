@@ -2,7 +2,6 @@ import json
 import unittest
 from pyobvector import *
 from sqlalchemy import Column, Integer, JSON, String, text, Table
-from sqlalchemy import func
 import logging
 
 logger = logging.getLogger(__name__)
@@ -275,7 +274,7 @@ class ObVecClientTest(unittest.TestCase):
                 self.assertEqual(row[1], ["tag1"])
                 self.assertEqual(row[2], [[9]])
             else:
-                self.fail("Unexpected row: {}".format(row))
+                self.fail(f"Unexpected row: {row}")
 
     def test_refresh_metadata(self):
         test_collection_name = "ob_refresh_metadata_test"

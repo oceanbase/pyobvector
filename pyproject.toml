@@ -24,7 +24,8 @@ Repository = "https://github.com/oceanbase/pyobvector.git"
 [dependency-groups]
 dev = [
     "pytest>=8.2.2",
-    "pylint>=3.2.7"
+    "pylint>=3.2.7",
+    "ruff>=0.14.10",
 ]
 
 [tool.pytest.ini_options]
@@ -33,3 +34,9 @@ log_level = "INFO"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.ruff.lint]
+select = [
+    "UP", # pyupgrade
+    "F401", # unused-import
+]

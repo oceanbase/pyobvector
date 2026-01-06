@@ -1,6 +1,6 @@
 """A module to specify fts index parameters"""
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 class FtsParser(Enum):
     """Built-in full-text search parser types supported by OceanBase"""
@@ -23,7 +23,7 @@ class FtsIndexParam:
     def __init__(
         self,
         index_name: str,
-        field_names: List[str],
+        field_names: list[str],
         parser_type: Optional[Union[FtsParser, str]] = None,
     ):
         self.index_name = index_name

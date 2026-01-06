@@ -1,7 +1,7 @@
 """Milvus Like Client."""
 import logging
 import json
-from typing import Optional, Union, Dict, List
+from typing import Optional, Union
 
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy import (
@@ -147,7 +147,7 @@ class MilvusLikeClient(Client):
 
     def get_collection_stats(
         self, collection_name: str, timeout: Optional[float] = None # pylint: disable=unused-argument
-    ) -> Dict:
+    ) -> dict:
         """Get collection row count.
         
         Args:
@@ -354,12 +354,12 @@ class MilvusLikeClient(Client):
         with_dist: bool = False,
         flter=None,
         limit: int = 10,
-        output_fields: Optional[List[str]] = None,
+        output_fields: Optional[list[str]] = None,
         search_params: Optional[dict] = None,
         timeout: Optional[float] = None, # pylint: disable=unused-argument
-        partition_names: Optional[List[str]] = None,
+        partition_names: Optional[list[str]] = None,
         **kwargs, # pylint: disable=unused-argument
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Perform ann search.
         Note: OceanBase does not support batch search now. `data` & the return value is not a batch.
         
@@ -467,11 +467,11 @@ class MilvusLikeClient(Client):
         self,
         collection_name: str,
         flter=None,
-        output_fields: Optional[List[str]] = None,
+        output_fields: Optional[list[str]] = None,
         timeout: Optional[float] = None, # pylint: disable=unused-argument
-        partition_names: Optional[List[str]] = None,
+        partition_names: Optional[list[str]] = None,
         **kwargs, # pylint: disable=unused-argument
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Query records.
         
         Args:
@@ -533,11 +533,11 @@ class MilvusLikeClient(Client):
         self,
         collection_name: str,
         ids: Union[list, str, int] = None,
-        output_fields: Optional[List[str]] = None,
+        output_fields: Optional[list[str]] = None,
         timeout: Optional[float] = None, # pylint: disable=unused-argument
-        partition_names: Optional[List[str]] = None,
+        partition_names: Optional[list[str]] = None,
         **kwargs, # pylint: disable=unused-argument
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Get records with specified primary field `ids`.
         
         Args:
@@ -672,7 +672,7 @@ class MilvusLikeClient(Client):
     def insert(
         self,
         collection_name: str,
-        data: Union[Dict, List[Dict]],
+        data: Union[dict, list[dict]],
         timeout: Optional[float] = None,
         partition_name: Optional[str] = "",
     ) -> (
@@ -700,10 +700,10 @@ class MilvusLikeClient(Client):
     def upsert(
         self,
         collection_name: str,
-        data: Union[Dict, List[Dict]],
+        data: Union[dict, list[dict]],
         timeout: Optional[float] = None, # pylint: disable=unused-argument
         partition_name: Optional[str] = "",
-    ) -> List[Union[str, int]]:
+    ) -> list[Union[str, int]]:
         """Update data in table. If primary key is duplicated, replace it.
         
         Args:
