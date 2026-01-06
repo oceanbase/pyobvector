@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class ObParititonTest(unittest.TestCase):
+class ObPartitionTest(unittest.TestCase):
     def setUp(self) -> None:
         self.maxDiff = None
 
@@ -79,7 +79,7 @@ class ObParititonTest(unittest.TestCase):
             key_part.do_compile(), "PARTITION BY KEY (id,gmt_create) PARTITIONS 10"
         )
 
-    def test_range_columns_with_sub_parititon(self):
+    def test_range_columns_with_sub_partition(self):
         range_columns_part = ObRangePartition(
             True,
             range_part_infos=[
