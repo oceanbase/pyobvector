@@ -50,6 +50,8 @@ class FtsIndexParam:
                 return "beng"
             if self.parser_type == FtsParser.JIEBA:
                 return "jieba"
+            # Raise exception for unrecognized FtsParser enum values
+            raise ValueError(f"Unrecognized FtsParser enum value: {self.parser_type}")
         
         return None
 

@@ -148,12 +148,13 @@ class ObFtsIndexTest(unittest.TestCase):
                     n_limits=10,
                 )
                 rows = res.fetchall()
-                self.assertGreaterEqual(len(rows), 0, f"{parser_type.name} parser should return results")
+                # Verify that full-text search actually works by checking at least one result
+                self.assertGreater(len(rows), 0, f"{parser_type.name} parser should return at least one result for 'test'")
                 
-            except Exception as e:
-                # JIEBA may require additional installation, skip
-                if "jieba" in str(e).lower() or "not defined" in str(e).lower():
-                    logger.warning(f"Skipping {parser_type.name} parser test: {e}")
+            except (ImportError, NameError, AttributeError) as e:
+                # JIEBA may require additional installation, skip only when Jieba is missing
+                if "jieba" in str(e).lower():
+                    logger.warning(f"Skipping {parser_type.name} parser test due to missing Jieba dependency: {e}")
                     continue
                 raise
             finally:
@@ -197,7 +198,8 @@ class ObFtsIndexTest(unittest.TestCase):
             n_limits=10,
         )
         rows = res.fetchall()
-        self.assertGreaterEqual(len(rows), 0)
+        # Verify that default parser actually works by checking at least one result
+        self.assertGreater(len(rows), 0, "Default parser should return at least one result for 'test'")
         
         self.client.drop_table_if_exist(test_collection_name)
 
@@ -247,7 +249,8 @@ class ObFtsIndexTest(unittest.TestCase):
             n_limits=10,
         )
         rows_title = res_title.fetchall()
-        self.assertGreaterEqual(len(rows_title), 0)
+        # Verify that title field search works
+        self.assertGreater(len(rows_title), 0, "Title field search should return at least one result")
         
         # Test searching content field
         res_content = self.client.get(
@@ -258,7 +261,8 @@ class ObFtsIndexTest(unittest.TestCase):
             n_limits=10,
         )
         rows_content = res_content.fetchall()
-        self.assertGreaterEqual(len(rows_content), 0)
+        # Verify that content field search works
+        self.assertGreater(len(rows_content), 0, "Content field search should return at least one result")
         
         self.client.drop_table_if_exist(test_collection_name)
 
@@ -302,7 +306,8 @@ class ObFtsIndexTest(unittest.TestCase):
             n_limits=10,
         )
         rows = res.fetchall()
-        self.assertGreaterEqual(len(rows), 0)
+        # Verify that Chinese full-text search works by checking at least one result
+        self.assertGreater(len(rows), 0, "Chinese search should return at least one result for '数据库'")
         
         self.client.drop_table_if_exist(test_collection_name)
 
@@ -344,8 +349,8 @@ class ObFtsIndexTest(unittest.TestCase):
             n_limits=10,
         )
         rows = res.fetchall()
-        # Full-text search is usually case-insensitive, should find relevant results
-        self.assertGreaterEqual(len(rows), 0)
+        # Full-text search is usually case-insensitive, verify it finds all three records
+        self.assertEqual(len(rows), 3, "Case-insensitive search should find all three records containing 'please'")
         
         self.client.drop_table_if_exist(test_collection_name)
 
@@ -392,8 +397,8 @@ class ObFtsIndexTest(unittest.TestCase):
             n_limits=10,
         )
         rows = res.fetchall()
-        # Should only return records with category=1 and containing 'like'
-        self.assertGreaterEqual(len(rows), 0)
+        # Should only return records with category=1 and containing 'like' (expected: 2 records)
+        self.assertEqual(len(rows), 2, "Complex query should return exactly 2 records with category=1 and containing 'like'")
         for row in rows:
             self.assertEqual(row[2], 1)  # category should be 1
         
@@ -442,7 +447,8 @@ class ObFtsIndexTest(unittest.TestCase):
             n_limits=10,
         )
         rows = res.fetchall()
-        self.assertGreaterEqual(len(rows), 0)
+        # Verify that index created after insertion works (expected: 2 records containing 'test')
+        self.assertEqual(len(rows), 2, "Index created after insertion should return 2 records containing 'test'")
         
         self.client.drop_table_if_exist(test_collection_name)
         

@@ -885,8 +885,9 @@ class ObVecJsonTableClient(ObVecClient):
                 col.args['table'] = identifier
 
         # Manually create the JOIN node for json_table
-        # In sqlglot 26+, comma-separated tables may not be parsed as 'joins',
-        # so we directly parse the json_table expression and create a JOIN node
+        # In some versions of sqlglot, comma-separated tables may not be parsed as
+        # explicit JOINS, so we directly parse the json_table expression and create a JOIN node
+        # explicitly
         json_table_expr = parse_one(json_table_str, dialect="oceanbase")
         
         join_node = exp.Join()
