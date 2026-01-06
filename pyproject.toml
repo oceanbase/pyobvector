@@ -6,27 +6,30 @@ authors = [{name="shanhaikang.shk",email="shanhaikang.shk@oceanbase.com"}]
 readme = "README.md"
 license = "Apache-2.0"
 keywords = ["oceanbase", "vector store", "obvector"]
+requires-python = ">=3.9"
+
+dependencies = [
+    "numpy>=1.17.0",
+    "sqlalchemy>=1.4,<=3",
+    "pymysql>=1.1.1",
+    "aiomysql>=0.3.2",
+    "sqlglot>=26.0.1",
+    "pydantic>=2.7.0,<3"
+]
 
 [project.urls]
 Homepage = "https://github.com/oceanbase/pyobvector"
 Repository = "https://github.com/oceanbase/pyobvector.git"
 
-[tool.poetry.dependencies]
-python = ">=3.9,<4.0"
-numpy = ">=1.17.0"
-sqlalchemy = ">=1.4,<=3"
-pymysql = "^1.1.1"
-aiomysql = "^0.3.2"
-sqlglot = ">=26.0.1"
-pydantic = ">=2.7.0,<3"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.2.2"
-pylint = "^3.2.7"
+[dependency-groups]
+dev = [
+    "pytest>=8.2.2",
+    "pylint>=3.2.7"
+]
 
 [tool.pytest.ini_options]
 log_level = "INFO"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

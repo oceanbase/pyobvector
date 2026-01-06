@@ -1,4 +1,5 @@
 poetry.lock
+uv.lock
 tests/.env
 __pycache__/
 build/

@@ -40,13 +40,12 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install Poetry
-        run: |
-          pip install poetry
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
 
       - name: Install dependencies
         run: |
-          poetry install
+          uv sync --dev
 
       - name: Start OceanBase container
         uses: oceanbase/setup-oceanbase-ce@v1
@@ -61,4 +60,4 @@ jobs:
 
       - name: Run tests
         run: |
-          poetry run pytest --log-cli-level=INFO ${{ matrix.test_filter }}
+          uv run pytest --log-cli-level=INFO ${{ matrix.test_filter }}
