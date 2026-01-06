@@ -884,12 +884,19 @@ class ObVecJsonTableClient(ObVecClient):
                 identifier.args['quoted'] = False
                 col.args['table'] = identifier
 
-        join_clause = parse_one(f"from t1, {json_table_str}")
-        join_node = join_clause.args['joins'][0]
-        if 'joins' in ast.args.keys():
-            ast.args['joins'].append(join_node)
-        else:
-            ast.args['joins'] = [join_node]
+        # Manually create the JOIN node for json_table
+        # In some versions of sqlglot, comma-separated tables may not be parsed as
+        # explicit JOINS, so we directly parse the json_table expression and create a JOIN node
+        # explicitly
+        json_table_expr = parse_one(json_table_str, dialect="oceanbase")
+        
+        join_node = exp.Join()
+        join_node.args['this'] = json_table_expr
+        join_node.args['kind'] = None  # CROSS JOIN (implicit join with comma)
+        
+        if 'joins' not in ast.args:
+            ast.args['joins'] = []
+        ast.args['joins'].append(join_node)
 
         if real_user_id:
             extra_filter_str = f"{JSON_TABLE_DATA_TABLE_NAME}.user_id = '{real_user_id}' AND {JSON_TABLE_DATA_TABLE_NAME}.jtable_name = '{table_name}'"
