@@ -13,15 +13,34 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        image_tag: ["4.4.1.0-100000032025101610"]
+        init_sql: ["ALTER SYSTEM ob_vector_memory_limit_percentage = 30; SET GLOBAL ob_query_timeout=100000000;"]
+        test_filter: ["tests/test_hybrid_search.py::HybridSearchTest"]
         include:
-          - image_tag: "4.3.5.3-103000092025080818"
+          - python-version: 3.12
+            image_tag: "4.3.5.3-103000092025080818"
             init_sql: "ALTER SYSTEM ob_vector_memory_limit_percentage = 30; CREATE USER 'jtuser'@'%'; GRANT SELECT, INSERT, UPDATE, DELETE ON test.* TO 'jtuser'@'%'; FLUSH PRIVILEGES;"
             test_filter: "-k \"not HybridSearchTest\""
-          - image_tag: "4.4.1.0-100000032025101610"
-            init_sql: "ALTER SYSTEM ob_vector_memory_limit_percentage = 30; SET GLOBAL ob_query_timeout=100000000;"
-            test_filter: "tests/test_hybrid_search.py::HybridSearchTest"
 
     steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Lint
+        run: uv run ruff check
+
+      - name: Package build test
+        run: uv build
+
       - name: Free disk space
         uses: kfir4444/free-disk-space@main
         with:
@@ -31,21 +50,6 @@ jobs:
           haskell: true
           large-packages: true
           swap-storage: true
-
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.x'
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-
-      - name: Install dependencies
-        run: |
-          uv sync --dev
 
       - name: Start OceanBase container
         uses: oceanbase/setup-oceanbase-ce@v1

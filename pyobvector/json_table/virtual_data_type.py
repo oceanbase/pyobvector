@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_DOWN
 from enum import Enum
 from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated
 
 from pydantic import BaseModel, Field, AfterValidator, create_model
 

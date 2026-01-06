@@ -1,7 +1,6 @@
 """gis_func: An extended system function in GIS."""
 
 import logging
-from typing import Tuple
 
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import FunctionElement
@@ -30,7 +29,7 @@ def compile_ST_GeomFromText(element, compiler, **kwargs): # pylint: disable=unus
     for idx, arg in enumerate(element.args):
         if idx == 0:
             if (
-                (not isinstance(arg, Tuple)) or
+                (not isinstance(arg, tuple)) or
                 (len(arg) != 2) or
                 (not all(isinstance(x, float) for x in arg))
             ):

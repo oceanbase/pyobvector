@@ -1,10 +1,9 @@
 import logging
 import re
-from typing import Tuple
 
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import FunctionElement
-from sqlalchemy import BINARY, Float, Boolean, Text
+from sqlalchemy import Text
 
 logger = logging.getLogger(__name__)
 

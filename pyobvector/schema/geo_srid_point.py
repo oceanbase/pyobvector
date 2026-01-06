@@ -1,5 +1,5 @@
 """Point: OceanBase GIS data type for SQLAlchemy"""
-from typing import Tuple, Optional
+from typing import Optional
 from sqlalchemy.types import UserDefinedType, String
 
 class POINT(UserDefinedType):
@@ -24,7 +24,7 @@ class POINT(UserDefinedType):
         return f"POINT SRID {self.srid}"
 
     @classmethod
-    def to_db(cls, value: Tuple[float, float]):
+    def to_db(cls, value: tuple[float, float]):
         """Parse tuple to POINT literal"""
         return f"POINT({value[0]} {value[1]})"
 

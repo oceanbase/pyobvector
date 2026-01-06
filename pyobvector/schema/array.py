@@ -1,6 +1,7 @@
 """ARRAY: An extended data type for SQLAlchemy"""
 import json
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any, Optional, Union
+from collections.abc import Sequence
 
 from sqlalchemy.sql.type_api import TypeEngine
 from sqlalchemy.types import UserDefinedType, String
@@ -49,7 +50,7 @@ class ARRAY(UserDefinedType):
 
     def _validate_dimension(self, value: list[Any]):
         arr_depth = self._get_list_depth(value)
-        assert arr_depth == self.dim, "Array dimension mismatch, expected {}, got {}".format(self.dim, arr_depth)
+        assert arr_depth == self.dim, f"Array dimension mismatch, expected {self.dim}, got {arr_depth}"
 
     def bind_processor(self, dialect):
         item_type = self.item_type
@@ -58,7 +59,7 @@ class ARRAY(UserDefinedType):
 
         item_proc = item_type.dialect_impl(dialect).bind_processor(dialect)
 
-        def process(value: Optional[Sequence[Any] | str]) -> Optional[str]:
+        def process(value: Optional[Union[Sequence[Any] | str]]) -> Optional[str]:
             if value is None:
                 return None
             if isinstance(value, str):
@@ -85,7 +86,7 @@ class ARRAY(UserDefinedType):
 
         item_proc = item_type.dialect_impl(dialect).result_processor(dialect, coltype)
 
-        def process(value: Optional[str]) -> Optional[List[Any]]:
+        def process(value: Optional[str]) -> Optional[list[Any]]:
             if value is None:
                 return None
 

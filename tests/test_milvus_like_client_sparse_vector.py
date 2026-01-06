@@ -1,7 +1,6 @@
 import unittest
 from pyobvector import *
-from sqlalchemy import Column, Integer, Table, func, text, Index, String
-import numpy as np
+from sqlalchemy import text
 import logging
 
 logger = logging.getLogger(__name__)

@@ -1,9 +1,5 @@
 import unittest
-from pyobvector.client import ObVecClient, VecIndexType, IndexParam
-from pyobvector.schema import VECTOR, VectorIndex
-from sqlalchemy import Column, Integer, Table
-from sqlalchemy.sql import func
-from sqlalchemy.exc import NoSuchTableError
+from pyobvector.client import ObVecClient
 
 
 class ObVecClientTest(unittest.TestCase):
