@@ -85,13 +85,13 @@ class ExceptionsMessage:
         "Range expression is necessary when partition type is Range"
     )
     PartitionRangeColNameListMissing = (
-        "Column name list is necessary when parititon type is RangeColumns"
+        "Column name list is necessary when partition type is RangeColumns"
     )
     PartitionListExprMissing = (
         "List expression is necessary when partition type is List"
     )
     PartitionListColNameListMissing = (
-        "Column name list is necessary when parititon type is ListColumns"
+        "Column name list is necessary when partition type is ListColumns"
     )
     PartitionHashNameListAndPartCntMissing = (
         "One of hash_part_name_list and part_count must be set when partition type is Hash"
