@@ -2,6 +2,14 @@
 
 This file documents all released versions and their notable changes for the pyobvector project. Changes are grouped by version and categorized as Added (new features), Changed (modifications), Fixed (bug fixes), and Security (security updates).
 
+## [0.2.21](https://github.com/oceanbase/pyobvector/compare/release-v0.2.20...release-v0.2.21) - 2026-01-13
+
+- Migrate tool.poetry section to project section following PEP 518
+- use [dependency-groups] as PEP 735 defined
+- Feat: Add full-text index type support
+- Fix typo in word partition
+- Align required python versions and test on python version matrix
+
 ## [0.2.20](https://github.com/oceanbase/pyobvector/compare/release-v0.2.19...release-v0.2.20) - 2025-11-20
 
 ### Added
