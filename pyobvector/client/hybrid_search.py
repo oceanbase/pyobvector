@@ -61,6 +61,8 @@ class HybridSearch(Client):
         with self.engine.connect() as conn:
             with conn.begin():
                 res = conn.execute(sql, {"index": index, "body_str": body_str}).fetchone()
+                if res[0] is None:
+                    return []
                 return json.loads(res[0])
 
     def get_sql(
@@ -84,4 +86,6 @@ class HybridSearch(Client):
         with self.engine.connect() as conn:
             with conn.begin():
                 res = conn.execute(sql, {"index": index, "body_str": body_str}).fetchone()
+                if res[0] is None:
+                    return ""
                 return res[0]
