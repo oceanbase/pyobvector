@@ -1,6 +1,6 @@
 [project]
 name = "pyobvector"
-version = "0.2.21"
+version = "0.2.22"
 description = "A python SDK for OceanBase Vector Store, based on SQLAlchemy, compatible with Milvus API."
 authors = [{name="shanhaikang.shk",email="shanhaikang.shk@oceanbase.com"}]
 readme = "README.md"

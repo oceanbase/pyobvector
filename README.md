@@ -15,7 +15,7 @@ uv sync
 - install with pip:
 
 ```shell
-pip install pyobvector==0.2.21
+pip install pyobvector==0.2.22
 ```
 
 ## Build Doc
