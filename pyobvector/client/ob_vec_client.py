@@ -65,6 +65,7 @@ class ObVecClient(ObClient):
         vidxs: Optional[IndexParams] = None,
         fts_idxs: Optional[list[FtsIndexParam]] = None,
         partitions: Optional[ObPartition] = None,
+        **kwargs,
     ):
         """Create table with optional index_params.
 
@@ -75,8 +76,10 @@ class ObVecClient(ObClient):
             vidxs (Optional[IndexParams]): optional vector index schema
             fts_idxs (Optional[List[FtsIndexParam]]): optional full-text search index schema
             partitions (Optional[ObPartition]): optional partition strategy
+            **kwargs: additional keyword arguments (e.g., mysql_organization='heap')
         """
         sparse_vidxs = self._get_sparse_vector_index_params(vidxs)
+        kwargs.setdefault("extend_existing", True)
         with self.engine.connect() as conn:
             with conn.begin():
                 # create table with common index
@@ -86,14 +89,14 @@ class ObVecClient(ObClient):
                         self.metadata_obj,
                         *columns,
                         *indexes,
-                        extend_existing=True,
+                        **kwargs,
                     )
                 else:
                     table = ObTable(
                         table_name,
                         self.metadata_obj,
                         *columns,
-                        extend_existing=True,
+                        **kwargs,
                     )
                 if sparse_vidxs is not None and len(sparse_vidxs) > 0:
                     create_table_sql = str(CreateTable(table).compile(self.engine))
