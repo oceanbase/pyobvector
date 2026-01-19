@@ -10,7 +10,7 @@ logger.setLevel(logging.DEBUG)
 
 class ObVecClientTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.client = ObVecClient() # Set your link string.
+        self.client = ObVecClient()  # Set your link string.
 
     def test_ann_search(self):
         test_collection_name = "OB文档_ann_test"
@@ -62,7 +62,10 @@ class ObVecClientTest(unittest.TestCase):
             topk=5,
             output_column_names=["id"],
         )
-        self.assertEqual(set(res.fetchall()), set([(112,0.0), (111,0.0), (10,0.0), (11,0.0), (12,0.0)]))
+        self.assertEqual(
+            set(res.fetchall()),
+            set([(112, 0.0), (111, 0.0), (10, 0.0), (11, 0.0), (12, 0.0)]),
+        )
 
         res = self.client.ann_search(
             test_collection_name,
@@ -77,8 +80,12 @@ class ObVecClientTest(unittest.TestCase):
         self.assertEqual(set([r[0] for r in res.fetchall()]), set([12, 11, 10, 5, 7]))
 
         # Additional tests: using output_columns parameter
-        table = Table(test_collection_name, self.client.metadata_obj, autoload_with=self.client.engine)
-        
+        table = Table(
+            test_collection_name,
+            self.client.metadata_obj,
+            autoload_with=self.client.engine,
+        )
+
         # Test output_columns with Column objects
         res = self.client.ann_search(
             test_collection_name,
@@ -87,7 +94,7 @@ class ObVecClientTest(unittest.TestCase):
             distance_func=l2_distance,
             with_dist=True,
             topk=5,
-            output_columns=[table.c.id]
+            output_columns=[table.c.id],
         )
         results = res.fetchall()
         self.assertEqual(len(results), 5)
@@ -102,17 +109,14 @@ class ObVecClientTest(unittest.TestCase):
             distance_func=l2_distance,
             with_dist=True,
             topk=5,
-            output_columns=[
-                table.c.id,
-                (table.c.id + 1000).label('id_plus_1000')
-            ]
+            output_columns=[table.c.id, (table.c.id + 1000).label("id_plus_1000")],
         )
         results = res.fetchall()
         self.assertEqual(len(results), 5)
         self.assertEqual(len(results[0]), 3)
         # Verify calculation results
         for row in results:
-            self.assertEqual(row[1], row[0] + 1000)  
+            self.assertEqual(row[1], row[0] + 1000)
 
         # Test parameter priority - output_columns takes precedence over output_column_names
         res = self.client.ann_search(
@@ -123,12 +127,12 @@ class ObVecClientTest(unittest.TestCase):
             with_dist=True,
             topk=5,
             output_column_names=["id"],
-            output_columns=[table.c.id, table.c.meta]
+            output_columns=[table.c.id, table.c.meta],
         )
         results = res.fetchall()
         self.assertEqual(len(results), 5)
         self.assertEqual(len(results[0]), 3)
-        
+
         res = self.client.ann_search(
             test_collection_name,
             vec_data=[0, 0, 0],
@@ -173,9 +177,7 @@ class ObVecClientTest(unittest.TestCase):
             Column("embedding", VECTOR(3)),
             Column("meta", JSON),
         ]
-        self.client.create_table(
-            test_collection_name, columns=cols
-        )
+        self.client.create_table(test_collection_name, columns=cols)
 
         # create vector index
         self.client.create_index(
@@ -188,10 +190,18 @@ class ObVecClientTest(unittest.TestCase):
 
         # insert data
         data = [
-            {"id":"abc", "embedding":[0.748479, 0.276979, 0.555195], "meta": {"page": 1}},
-            {"id":"bcd", "embedding":[0.748479, 0.276979, 0.555195], "meta": {"page": 2}},
-            {"id":"cde", "embedding":[0, 0, 0], "meta": {"page": 3}},
-            {"id":"def", "embedding":[1, 2, 3], "meta": {"page": 4}},
+            {
+                "id": "abc",
+                "embedding": [0.748479, 0.276979, 0.555195],
+                "meta": {"page": 1},
+            },
+            {
+                "id": "bcd",
+                "embedding": [0.748479, 0.276979, 0.555195],
+                "meta": {"page": 2},
+            },
+            {"id": "cde", "embedding": [0, 0, 0], "meta": {"page": 3}},
+            {"id": "def", "embedding": [1, 2, 3], "meta": {"page": 4}},
         ]
         self.client.insert(test_collection_name, data=data)
 
@@ -200,9 +210,9 @@ class ObVecClientTest(unittest.TestCase):
             test_collection_name,
             ids=["abc", "bcd", "cde", "def"],
             where_clause=[text("meta->'$.page' > 1")],
-            output_column_name=['id']
+            output_column_name=["id"],
         )
-        self.assertEqual(set(res.fetchall()), set([('cde',)]))
+        self.assertEqual(set(res.fetchall()), set([("cde",)]))
 
     def test_set_variable(self):
         self.client.set_ob_hnsw_ef_search(100)
@@ -217,9 +227,7 @@ class ObVecClientTest(unittest.TestCase):
             Column("embedding", VECTOR(3)),
             Column("meta", JSON),
         ]
-        self.client.create_table(
-            test_collection_name, columns=cols
-        )
+        self.client.create_table(test_collection_name, columns=cols)
 
         # create vector index
         self.client.create_index(
@@ -248,13 +256,19 @@ class ObVecClientTest(unittest.TestCase):
             Column("arr_c", ARRAY(String(64))),
             Column("arr_nested_c", ARRAY(ARRAY(Integer))),
         ]
-        self.client.create_table(
-            test_collection_name, columns=cols
-        )
+        self.client.create_table(test_collection_name, columns=cols)
 
         data = [
-            {"name": "Alice", "arr_c": ["tag1", "tag2"], "arr_nested_c": [[1, 2, 3, 4, 5]]},
-            {"name": "Bob", "arr_c": ["tag2", "tag3"], "arr_nested_c": json.dumps([[6, 7, 8]])},
+            {
+                "name": "Alice",
+                "arr_c": ["tag1", "tag2"],
+                "arr_nested_c": [[1, 2, 3, 4, 5]],
+            },
+            {
+                "name": "Bob",
+                "arr_c": ["tag2", "tag3"],
+                "arr_nested_c": json.dumps([[6, 7, 8]]),
+            },
             {"name": "Charlie", "arr_c": ["tag1"], "arr_nested_c": [[9]]},
         ]
         self.client.insert(test_collection_name, data=data)
@@ -263,7 +277,7 @@ class ObVecClientTest(unittest.TestCase):
             test_collection_name,
             ids=None,
             where_clause=[text(f"array_contains(arr_c, 'tag1')")],
-            output_column_name=["name", "arr_c", "arr_nested_c"]
+            output_column_name=["name", "arr_c", "arr_nested_c"],
         )
         for row in res.fetchall():
             name = row[0]
@@ -286,10 +300,12 @@ class ObVecClientTest(unittest.TestCase):
                 Column("id", Integer, primary_key=True, autoincrement=True),
                 Column("name", String(64), nullable=True),
             ],
-            mysql_charset='utf8mb4',
-            mysql_collate='utf8mb4_unicode_ci',
+            mysql_charset="utf8mb4",
+            mysql_collate="utf8mb4_unicode_ci",
         )
-        self.client.perform_raw_text_sql(f"ALTER TABLE {test_collection_name} ADD COLUMN age INTEGER")
+        self.client.perform_raw_text_sql(
+            f"ALTER TABLE {test_collection_name} ADD COLUMN age INTEGER"
+        )
 
         err_msg = ""
         try:
@@ -329,14 +345,14 @@ class ObVecClientTest(unittest.TestCase):
             table_name=test_collection_name,
             columns=[
                 Column("id", Integer, primary_key=True, autoincrement=True),
-            ]
+            ],
         )
         self.client.add_columns(
             table_name=test_collection_name,
             columns=[
                 Column("name", String(64), nullable=True),
                 Column("age", Integer, nullable=True),
-            ]
+            ],
         )
         self.client.insert(
             table_name=test_collection_name,
@@ -354,10 +370,7 @@ class ObVecClientTest(unittest.TestCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(len(res[0]), 3)
 
-        self.client.drop_columns(
-            table_name=test_collection_name,
-            column_names=["age"]
-        )
+        self.client.drop_columns(table_name=test_collection_name, column_names=["age"])
 
         res = self.client.get(
             table_name=test_collection_name,

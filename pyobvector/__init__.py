@@ -1,10 +1,10 @@
 """A python SDK for OceanBase Vector Store, based on SQLAlchemy, compatible with Milvus API.
 
-`pyobvector` supports two modes: 
-1. `Milvus compatible mode`: You can use the `MilvusLikeClient` class to use vector storage 
+`pyobvector` supports two modes:
+1. `Milvus compatible mode`: You can use the `MilvusLikeClient` class to use vector storage
 in a way similar to the Milvus API.
-2. `SQLAlchemy hybrid mode`: You can use the vector storage function provided by the 
-`ObVecClient` class and execute the relational database statement with the SQLAlchemy library. 
+2. `SQLAlchemy hybrid mode`: You can use the vector storage function provided by the
+`ObVecClient` class and execute the relational database statement with the SQLAlchemy library.
 In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 
 * ObVecClient           MySQL client in SQLAlchemy hybrid mode
@@ -19,7 +19,7 @@ In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 * FtsIndex              Full Text Search Index
 * FieldSchema           Clas to define field schema in collection for MilvusLikeClient
 * CollectionSchema      Class to define collection schema for MilvusLikeClient
-* PartType              Specify partition type of table or collection 
+* PartType              Specify partition type of table or collection
                         for both ObVecClient and MilvusLikeClient
 * ObPartition           Abstract type class of all kind of Partition strategy
 * RangeListPartInfo     Specify Range/RangeColumns/List/ListColumns partition info
@@ -40,6 +40,7 @@ In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 * FtsIndexParam         Full Text Search index parameter
 * MatchAgainst          Full Text Search clause
 """
+
 from .client import *
 from .schema import (
     ARRAY,

@@ -1,4 +1,5 @@
 """A utility module for the extended data type class 'VECTOR'."""
+
 import json
 import numpy as np
 
@@ -9,6 +10,7 @@ class Vector:
     Attributes:
         _value (numpy.array): a numpy array
     """
+
     def __init__(self, value):
         # big-endian float32
         if not isinstance(value, np.ndarray) or value.dtype != ">f4":

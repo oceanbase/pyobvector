@@ -26,11 +26,13 @@ class HybridSearchTest(unittest.TestCase):
                 Column("content", VARCHAR(255)),
             ],
             indexes=[
-                VectorIndex("vec_idx", "vector", params="distance=l2, type=hnsw, lib=vsag"),
+                VectorIndex(
+                    "vec_idx", "vector", params="distance=l2, type=hnsw, lib=vsag"
+                ),
             ],
-            mysql_charset='utf8mb4',
-            mysql_collate='utf8mb4_unicode_ci',
-            mysql_organization='heap',
+            mysql_charset="utf8mb4",
+            mysql_collate="utf8mb4_unicode_ci",
+            mysql_organization="heap",
         )
 
         for col in ["title", "content"]:
@@ -77,8 +79,8 @@ class HybridSearchTest(unittest.TestCase):
                     "vector": [2, 2, 2],
                     "title": "OceanBase 实时分析能力白皮书",
                     "content": "重点解读 OceanBase 实时分析能力的 8 大核心特性，以及在 HTAP 混合负载场景、实时数据分析场景，和 PL/SQL 批处理场景的应用实践与案例。",
-                }
-            ]
+                },
+            ],
         )
 
     def _search_param(self):
@@ -87,14 +89,11 @@ class HybridSearchTest(unittest.TestCase):
                 "must": [
                     {
                         "query_string": {
-                            "fields": [
-                                "title^10",
-                                "content"
-                            ],
+                            "fields": ["title^10", "content"],
                             "type": "best_fields",
-                            "query": "((数据)^0.5106318299637825 (迁移)^0.2651122588583924 (oceanbase)^0.22425591117782506 (\"oceanbase 数据 迁移\"~2)^1.5)",
+                            "query": '((数据)^0.5106318299637825 (迁移)^0.2651122588583924 (oceanbase)^0.22425591117782506 ("oceanbase 数据 迁移"~2)^1.5)',
                             "minimum_should_match": "30%",
-                            "boost": 1
+                            "boost": 1,
                         }
                     }
                 ],
@@ -103,25 +102,13 @@ class HybridSearchTest(unittest.TestCase):
                         "terms": {
                             "source_id": [
                                 "3b791472b57211f09c170242ac130008",
-                                "3b7af31eb57211f09c170242ac130008"
+                                "3b7af31eb57211f09c170242ac130008",
                             ]
                         }
                     },
-                    {
-                        "bool": {
-                            "must_not": [
-                                {
-                                    "range": {
-                                        "enabled": {
-                                            "lt": 1
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
+                    {"bool": {"must_not": [{"range": {"enabled": {"lt": 1}}}]}},
                 ],
-                "boost": 0.7
+                "boost": 0.7,
             }
         }
 
@@ -133,10 +120,10 @@ class HybridSearchTest(unittest.TestCase):
                 "num_candidates": 1024,
                 "query_vector": [1, 2, 3],
                 "filter": query,
-                "similarity": 0.2
+                "similarity": 0.2,
             },
             "from": 0,
-            "size": 60
+            "size": 60,
         }
 
     def test_search(self):

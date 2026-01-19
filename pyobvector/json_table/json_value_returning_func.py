@@ -7,6 +7,7 @@ from sqlalchemy import Text
 
 logger = logging.getLogger(__name__)
 
+
 class json_value(FunctionElement):
     type = Text()
     inherit_cache = True
@@ -14,6 +15,7 @@ class json_value(FunctionElement):
     def __init__(self, *args):
         super().__init__()
         self.args = args
+
 
 @compiles(json_value)
 def compile_json_value(element, compiler, **kwargs):
@@ -23,25 +25,25 @@ def compile_json_value(element, compiler, **kwargs):
     args.append(compiler.process(element.args[0]))
     if not (isinstance(element.args[1], str) and isinstance(element.args[2], str)):
         raise ValueError("Invalid args for json_value")
-    
-    if element.args[2].startswith('TINYINT'):
+
+    if element.args[2].startswith("TINYINT"):
         returning_type = "SIGNED"
-    elif element.args[2].startswith('TIMESTAMP'):
+    elif element.args[2].startswith("TIMESTAMP"):
         returning_type = "DATETIME"
-    elif element.args[2].startswith('INT'):
+    elif element.args[2].startswith("INT"):
         returning_type = "SIGNED"
-    elif element.args[2].startswith('VARCHAR'):
-        if element.args[2] == 'VARCHAR':
+    elif element.args[2].startswith("VARCHAR"):
+        if element.args[2] == "VARCHAR":
             returning_type = "CHAR(255)"
         else:
-            varchar_pattern = r'VARCHAR\((\d+)\)'
+            varchar_pattern = r"VARCHAR\((\d+)\)"
             varchar_matches = re.findall(varchar_pattern, element.args[2])
             returning_type = f"CHAR({int(varchar_matches[0])})"
-    elif element.args[2].startswith('DECIMAL'):
-        if element.args[2] == 'DECIMAL':
+    elif element.args[2].startswith("DECIMAL"):
+        if element.args[2] == "DECIMAL":
             returning_type = "DECIMAL(10, 0)"
         else:
-            decimal_pattern = r'DECIMAL\((\d+),\s*(\d+)\)'
+            decimal_pattern = r"DECIMAL\((\d+),\s*(\d+)\)"
             decimal_matches = re.findall(decimal_pattern, element.args[2])
             x, y = decimal_matches[0]
             returning_type = f"DECIMAL({x}, {y})"

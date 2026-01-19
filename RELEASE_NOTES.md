@@ -357,4 +357,3 @@ This file documents all released versions and their notable changes for the pyob
 ### Fixed
 
 - Fix upsert JSON column: no literal value renderer
-

@@ -1,9 +1,11 @@
 """Exception for MilvusLikeClient."""
+
 from .enum import IntEnum
 
 
 class ErrorCode(IntEnum):
     """Error codes for MilvusLikeClient."""
+
     SUCCESS = 0
     UNEXPECTED_ERROR = 1
     INVALID_ARGUMENT = 2
@@ -14,6 +16,7 @@ class ErrorCode(IntEnum):
 
 class ObException(Exception):
     """Base class for MilvusLikeClient exception."""
+
     def __init__(
         self,
         code: int = ErrorCode.UNEXPECTED_ERROR,
@@ -75,6 +78,7 @@ class ClusterVersionException(ObException):
 
 class ExceptionsMessage:
     """Exception Messages definition."""
+
     PartitionExprNotExists = "Partition expression string does not exist."
     PartitionMultiField = "Multi-Partition Field is not supported."
     PartitionLevelMoreThanTwo = "Partition Level should less than or equal to 2."
@@ -93,12 +97,8 @@ class ExceptionsMessage:
     PartitionListColNameListMissing = (
         "Column name list is necessary when partition type is ListColumns"
     )
-    PartitionHashNameListAndPartCntMissing = (
-        "One of hash_part_name_list and part_count must be set when partition type is Hash"
-    )
-    PartitionKeyNameListAndPartCntMissing = (
-        "One of key_part_name_list and part_count must be set when partition type is Key"
-    )
+    PartitionHashNameListAndPartCntMissing = "One of hash_part_name_list and part_count must be set when partition type is Hash"
+    PartitionKeyNameListAndPartCntMissing = "One of key_part_name_list and part_count must be set when partition type is Key"
     PrimaryFieldType = "Param primary_field must be int or str type."
     VectorFieldMissingDimParam = "Param 'dim' must be set for vector field."
     VarcharFieldMissingLengthParam = "Param 'max_length' must be set for varchar field."
@@ -108,7 +108,9 @@ class ExceptionsMessage:
     )
     CollectionNotExists = "Collection does not exist."
     MetricTypeParamTypeInvalid = "MetricType param type should be string."
-    MetricTypeValueInvalid = "MetricType should be 'l2'/'ip'/'neg_ip'/'cosine' in ann search."
+    MetricTypeValueInvalid = (
+        "MetricType should be 'l2'/'ip'/'neg_ip'/'cosine' in ann search."
+    )
     UsingInIDsWhenMultiPrimaryKey = "Using 'ids' when table has multi primary key."
     ClusterVersionIsLow = (
         "OceanBase %s feature is not supported because cluster version is below %s."

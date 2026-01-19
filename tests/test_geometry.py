@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 class ObVecGeoTest(unittest.TestCase):
     def setUp(self) -> None:
         self.client = ObVecClient()
@@ -19,17 +20,13 @@ class ObVecGeoTest(unittest.TestCase):
         cols = [
             Column("id", Integer, primary_key=True, autoincrement=True),
             Column("name", String(64)),
-            Column("geo", POINT(srid=4326), nullable=False)
+            Column("geo", POINT(srid=4326), nullable=False),
         ]
 
-        geo_index = [
-            Index("gidx", "geo")
-        ]
+        geo_index = [Index("gidx", "geo")]
 
         self.client.create_table(
-            table_name=test_collection_name,
-            columns=cols,
-            indexes=geo_index
+            table_name=test_collection_name, columns=cols, indexes=geo_index
         )
 
         data = [
@@ -42,14 +39,11 @@ class ObVecGeoTest(unittest.TestCase):
         table = Table(
             test_collection_name,
             self.client.metadata_obj,
-            autoload_with=self.client.engine
+            autoload_with=self.client.engine,
         )
         select_cols = [
             table.c["name"],
-            st_distance(
-                table.c["geo"], 
-                ST_GeomFromText((39.9289, 116.3883), 4326)
-            )
+            st_distance(table.c["geo"], ST_GeomFromText((39.9289, 116.3883), 4326)),
         ]
 
         where_clause = [
@@ -59,5 +53,5 @@ class ObVecGeoTest(unittest.TestCase):
         with self.client.engine.connect() as conn:
             with conn.begin():
                 res = conn.execute(stmt)
-        
-        self.assertEqual(res.fetchall(), [('A', 0.0), ('B', 1895.1085589748836)])
+
+        self.assertEqual(res.fetchall(), [("A", 0.0), ("B", 1895.1085589748836)])

@@ -1,10 +1,12 @@
 """VECTOR: An extended data type for SQLAlchemy"""
+
 from sqlalchemy.types import UserDefinedType, String
 from ..util import Vector
 
 
 class VECTOR(UserDefinedType):
     """VECTOR data type definition."""
+
     cache_ok = True
     _string = String()
 
@@ -12,7 +14,7 @@ class VECTOR(UserDefinedType):
         super(UserDefinedType, self).__init__()
         self.dim = dim
 
-    def get_col_spec(self, **kw): # pylint: disable=unused-argument
+    def get_col_spec(self, **kw):  # pylint: disable=unused-argument
         """Parse to vector data type definition in text SQL."""
         if self.dim is None:
             return "VECTOR"

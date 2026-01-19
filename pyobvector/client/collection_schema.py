@@ -1,10 +1,12 @@
 """FieldSchema & CollectionSchema definition module to be compatible with Milvus."""
+
 import copy
 from typing import Optional
 from sqlalchemy import Column
 from .schema_type import DataType, convert_datatype_to_sqltype
 from .exceptions import *
 from .partitions import *
+
 
 class FieldSchema:
     """FieldSchema definition.
@@ -18,6 +20,7 @@ class FieldSchema:
     nullable (bool) : whether the field can be null
     type_params (dict) : different parameters for different data type
     """
+
     def __init__(
         self,
         name: str,
@@ -117,12 +120,13 @@ class FieldSchema:
 
 class CollectionSchema:
     """CollectionSchema definition.
-    
+
     Attributes:
     fields (List[FieldSchema]) : a list of FieldSchema
     description (string) : collection description (not used in OceanBase)
     partitions (ObPartition) : partition strategy of this collection
     """
+
     def __init__(
         self,
         fields: Optional[list[FieldSchema]] = None,

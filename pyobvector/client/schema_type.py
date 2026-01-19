@@ -1,4 +1,5 @@
 """Data type module that compatible with Milvus."""
+
 from sqlalchemy import (
     Boolean,
     SmallInteger,
@@ -16,6 +17,7 @@ from ..schema import ARRAY, SPARSE_VECTOR, VECTOR
 
 class DataType(IntEnum):
     """Data type definition that compatible with Milvus."""
+
     # NONE = 0
     BOOL = 1
     INT8 = 2
@@ -40,7 +42,7 @@ class DataType(IntEnum):
 
 def convert_datatype_to_sqltype(datatype: DataType):
     """Convert Milvus data type to SQL type.
-    
+
     Args:
         datatype (DataType) : Milvus data type.
     """

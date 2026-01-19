@@ -1,4 +1,5 @@
 """OceanBase Hybrid Search Client."""
+
 import json
 import logging
 from typing import Any
@@ -27,7 +28,7 @@ class HybridSearch(Client):
         super().__init__(uri, user, password, db_name, **kwargs)
 
         min_required_version = ObVersion.from_db_version_nums(4, 4, 1, 0)
-        
+
         if self.ob_version < min_required_version:
             # For versions < 4.4.1.0, check if it's SeekDB
             if self._is_seekdb():
@@ -35,7 +36,8 @@ class HybridSearch(Client):
                 return
             raise ClusterVersionException(
                 code=ErrorCode.NOT_SUPPORTED,
-                message=ExceptionsMessage.ClusterVersionIsLow % ("Hybrid Search", "4.4.1.0"),
+                message=ExceptionsMessage.ClusterVersionIsLow
+                % ("Hybrid Search", "4.4.1.0"),
             )
 
     def search(
@@ -60,7 +62,9 @@ class HybridSearch(Client):
 
         with self.engine.connect() as conn:
             with conn.begin():
-                res = conn.execute(sql, {"index": index, "body_str": body_str}).fetchone()
+                res = conn.execute(
+                    sql, {"index": index, "body_str": body_str}
+                ).fetchone()
                 if res[0] is None:
                     return []
                 return json.loads(res[0])
@@ -85,7 +89,9 @@ class HybridSearch(Client):
 
         with self.engine.connect() as conn:
             with conn.begin():
-                res = conn.execute(sql, {"index": index, "body_str": body_str}).fetchone()
+                res = conn.execute(
+                    sql, {"index": index, "body_str": body_str}
+                ).fetchone()
                 if res[0] is None:
                     return ""
                 return res[0]

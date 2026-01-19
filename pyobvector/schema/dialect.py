@@ -1,4 +1,5 @@
 """OceanBase dialect."""
+
 from sqlalchemy import util
 from sqlalchemy.dialects.mysql import aiomysql, pymysql
 
@@ -7,10 +8,12 @@ from .vector import VECTOR
 from .sparse_vector import SPARSE_VECTOR
 from .geo_srid_point import POINT
 
+
 class OceanBaseDialect(pymysql.MySQLDialect_pymysql):
     # not change dialect name, since it is a subclass of pymysql.MySQLDialect_pymysql
     # name = "oceanbase"
     """Ocenbase dialect."""
+
     supports_statement_cache = True
 
     def __init__(self, **kwargs):
@@ -36,6 +39,7 @@ class OceanBaseDialect(pymysql.MySQLDialect_pymysql):
 
 class AsyncOceanBaseDialect(aiomysql.MySQLDialect_aiomysql):
     """OceanBase async dialect."""
+
     supports_statement_cache = True
 
     def __init__(self, **kwargs):

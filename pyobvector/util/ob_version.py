@@ -1,4 +1,5 @@
 """OceanBase cluster version module."""
+
 import copy
 
 
@@ -8,6 +9,7 @@ class ObVersion:
     Attributes:
         version_nums (List[int]): version number of OceanBase cluster. For example, '4.3.3.0'
     """
+
     def __init__(self, version_nums: list[int]):
         self.version_nums = copy.deepcopy(version_nums)
 

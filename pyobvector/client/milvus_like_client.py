@@ -1,4 +1,5 @@
 """Milvus Like Client."""
+
 import logging
 import json
 from typing import Optional, Union
@@ -62,11 +63,11 @@ class MilvusLikeClient(Client):
         index_params: Optional[IndexParams] = None,  # Used for custom setup
         max_length: int = 16384,
         **kwargs,
-    ): # pylint: disable=unused-argument
-        """Create a collection. 
+    ):  # pylint: disable=unused-argument
+        """Create a collection.
         If `schema` is not None, `dimension`, `primary_field_name`, `id_type`, `vector_field_name`,
         `metric_type`, `auto_id` will be ignored.
-        
+
         Args:
             collection_name (string): collection name
             dimension (Optional[int]): vector data dimension
@@ -146,10 +147,12 @@ class MilvusLikeClient(Client):
             )
 
     def get_collection_stats(
-        self, collection_name: str, timeout: Optional[float] = None # pylint: disable=unused-argument
+        self,
+        collection_name: str,
+        timeout: Optional[float] = None,  # pylint: disable=unused-argument
     ) -> dict:
         """Get collection row count.
-        
+
         Args:
             collection_name (string): collection name
             timeout (Optional[float]): not used in OceanBase
@@ -166,8 +169,10 @@ class MilvusLikeClient(Client):
                 return {"row_count": cnt}
 
     def has_collection(
-        self, collection_name: str, timeout: Optional[float] = None # pylint: disable=unused-argument
-    ) -> bool: # pylint: disable=unused-argument
+        self,
+        collection_name: str,
+        timeout: Optional[float] = None,  # pylint: disable=unused-argument
+    ) -> bool:  # pylint: disable=unused-argument
         """Check if collection exists.
 
         Args:
@@ -181,17 +186,20 @@ class MilvusLikeClient(Client):
 
     def drop_collection(self, collection_name: str) -> None:
         """Drop collection if exists.
-        
+
         Args:
             collection_name (string): collection name
         """
         self.drop_table_if_exist(collection_name)
 
     def rename_collection(
-        self, old_name: str, new_name: str, timeout: Optional[float] = None # pylint: disable=unused-argument
+        self,
+        old_name: str,
+        new_name: str,
+        timeout: Optional[float] = None,  # pylint: disable=unused-argument
     ) -> None:
         """Rename collection.
-        
+
         Args:
             old_name (string): old collection name
             new_name (string): new collection name
@@ -206,7 +214,7 @@ class MilvusLikeClient(Client):
         collection_name: str,
     ):
         """Load table into SQLAlchemy metadata.
-        
+
         Args:
             collection_name (string): which collection to load
 
@@ -230,9 +238,9 @@ class MilvusLikeClient(Client):
         index_params: IndexParams,
         timeout: Optional[float] = None,
         **kwargs,
-    ): # pylint: disable=unused-argument
+    ):  # pylint: disable=unused-argument
         """Create vector index with index params.
-        
+
         Args:
             collection_name (string): which collection to create vector index
             index_params (IndexParams): the vector index parameters
@@ -263,9 +271,9 @@ class MilvusLikeClient(Client):
         index_name: str,
         timeout: Optional[float] = None,
         **kwargs,
-    ): # pylint: disable=unused-argument
+    ):  # pylint: disable=unused-argument
         """Drop index on specified collection.
-        
+
         If the index not exists, SQL ERROR 1091 will raise.
 
         Args:
@@ -283,7 +291,7 @@ class MilvusLikeClient(Client):
         trigger_threshold: int = 10000,
     ):
         """Refresh vector index for performance.
-        
+
         Args:
             collection_name (string): collection name
             index_name (string): vector index name
@@ -303,7 +311,7 @@ class MilvusLikeClient(Client):
         trigger_threshold: float = 0.2,
     ):
         """Rebuild vector index for performance.
-        
+
         Args:
             collection_name (string): collection name
             index_name (string): vector index name
@@ -356,13 +364,13 @@ class MilvusLikeClient(Client):
         limit: int = 10,
         output_fields: Optional[list[str]] = None,
         search_params: Optional[dict] = None,
-        timeout: Optional[float] = None, # pylint: disable=unused-argument
+        timeout: Optional[float] = None,  # pylint: disable=unused-argument
         partition_names: Optional[list[str]] = None,
-        **kwargs, # pylint: disable=unused-argument
+        **kwargs,  # pylint: disable=unused-argument
     ) -> list[dict]:
         """Perform ann search.
         Note: OceanBase does not support batch search now. `data` & the return value is not a batch.
-        
+
         Args:
             collection_name (string): collection name
             data (list): the vector/sparse_vector data to search
@@ -392,9 +400,7 @@ class MilvusLikeClient(Client):
                         message=ExceptionsMessage.MetricTypeParamTypeInvalid,
                     )
                 lower_metric_type_str = search_params["metric_type"].lower()
-                if lower_metric_type_str not in (
-                    "l2", "neg_ip", "cosine", "ip"
-                ):
+                if lower_metric_type_str not in ("l2", "neg_ip", "cosine", "ip"):
                     raise VectorMetricTypeException(
                         code=ErrorCode.INVALID_ARGUMENT,
                         message=ExceptionsMessage.MetricTypeValueInvalid,
@@ -416,25 +422,34 @@ class MilvusLikeClient(Client):
 
         if with_dist:
             if isinstance(data, list):
-                columns.append(distance_func(table.c[anns_field],
-                    "[" + ",".join([str(np.float32(v)) for v in data]) + "]"))
+                columns.append(
+                    distance_func(
+                        table.c[anns_field],
+                        "[" + ",".join([str(np.float32(v)) for v in data]) + "]",
+                    )
+                )
             else:
                 columns.append(distance_func(table.c[anns_field], f"{data}"))
         stmt = select(*columns)
 
         if flter is not None:
             stmt = stmt.where(*flter)
-        
+
         if isinstance(data, list):
-            stmt = stmt.order_by(distance_func(table.c[anns_field],
-                "[" + ",".join([str(np.float32(v)) for v in data]) + "]"))
+            stmt = stmt.order_by(
+                distance_func(
+                    table.c[anns_field],
+                    "[" + ",".join([str(np.float32(v)) for v in data]) + "]",
+                )
+            )
         else:
             stmt = stmt.order_by(distance_func(table.c[anns_field], f"{data}"))
         stmt_str = (
-            str(stmt.compile(
-                dialect=self.engine.dialect,
-                compile_kwargs={"literal_binds": True}
-            ))
+            str(
+                stmt.compile(
+                    dialect=self.engine.dialect, compile_kwargs={"literal_binds": True}
+                )
+            )
             + f" APPROXIMATE limit {limit}"
         )
 
@@ -468,12 +483,12 @@ class MilvusLikeClient(Client):
         collection_name: str,
         flter=None,
         output_fields: Optional[list[str]] = None,
-        timeout: Optional[float] = None, # pylint: disable=unused-argument
+        timeout: Optional[float] = None,  # pylint: disable=unused-argument
         partition_names: Optional[list[str]] = None,
-        **kwargs, # pylint: disable=unused-argument
+        **kwargs,  # pylint: disable=unused-argument
     ) -> list[dict]:
         """Query records.
-        
+
         Args:
             collection_name (string): collection name
             flter: do ann search with filter (note: parameter name is intentionally 'flter' to distinguish it from the built-in function)
@@ -508,10 +523,12 @@ class MilvusLikeClient(Client):
                 if partition_names is None:
                     execute_res = conn.execute(stmt)
                 else:
-                    stmt_str = str(stmt.compile(
-                        dialect=self.engine.dialect,
-                        compile_kwargs={"literal_binds": True}
-                    ))
+                    stmt_str = str(
+                        stmt.compile(
+                            dialect=self.engine.dialect,
+                            compile_kwargs={"literal_binds": True},
+                        )
+                    )
                     stmt_str = self._insert_partition_hint_for_query_sql(
                         stmt_str, f"PARTITION({', '.join(partition_names)})"
                     )
@@ -534,12 +551,12 @@ class MilvusLikeClient(Client):
         collection_name: str,
         ids: Union[list, str, int] = None,
         output_fields: Optional[list[str]] = None,
-        timeout: Optional[float] = None, # pylint: disable=unused-argument
+        timeout: Optional[float] = None,  # pylint: disable=unused-argument
         partition_names: Optional[list[str]] = None,
-        **kwargs, # pylint: disable=unused-argument
+        **kwargs,  # pylint: disable=unused-argument
     ) -> list[dict]:
         """Get records with specified primary field `ids`.
-        
+
         Args:
             collection_name (string): collection name
             ids (Union[list, str, int]): specified primary field values
@@ -586,10 +603,12 @@ class MilvusLikeClient(Client):
                 if partition_names is None:
                     execute_res = conn.execute(stmt)
                 else:
-                    stmt_str = str(stmt.compile(
-                        dialect=self.engine.dialect,
-                        compile_kwargs={"literal_binds": True}
-                    ))
+                    stmt_str = str(
+                        stmt.compile(
+                            dialect=self.engine.dialect,
+                            compile_kwargs={"literal_binds": True},
+                        )
+                    )
                     stmt_str = self._insert_partition_hint_for_query_sql(
                         stmt_str, f"PARTITION({', '.join(partition_names)})"
                     )
@@ -611,10 +630,10 @@ class MilvusLikeClient(Client):
         self,
         collection_name: str,
         ids: Optional[Union[list, str, int]] = None,
-        timeout: Optional[float] = None, # pylint: disable=unused-argument
+        timeout: Optional[float] = None,  # pylint: disable=unused-argument
         flter=None,
         partition_name: Optional[str] = "",
-        **kwargs, # pylint: disable=unused-argument
+        **kwargs,  # pylint: disable=unused-argument
     ) -> dict:
         """Delete data in collection.
 
@@ -675,11 +694,9 @@ class MilvusLikeClient(Client):
         data: Union[dict, list[dict]],
         timeout: Optional[float] = None,
         partition_name: Optional[str] = "",
-    ) -> (
-        None
-    ):  # pylint: disable=unused-argument
+    ) -> None:  # pylint: disable=unused-argument
         """Insert data into collection.
-        
+
         Args:
             collection_name (string): collection name
             data (Union[Dict, List[Dict]]): data that will be inserted
@@ -701,11 +718,11 @@ class MilvusLikeClient(Client):
         self,
         collection_name: str,
         data: Union[dict, list[dict]],
-        timeout: Optional[float] = None, # pylint: disable=unused-argument
+        timeout: Optional[float] = None,  # pylint: disable=unused-argument
         partition_name: Optional[str] = "",
     ) -> list[Union[str, int]]:
         """Update data in table. If primary key is duplicated, replace it.
-        
+
         Args:
             collection_name (string): collection name
             data (Union[Dict, List[Dict]]): data that will be upserted

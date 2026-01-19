@@ -51,7 +51,9 @@ class ObClient:
         db_name: str = "test",
         **kwargs,
     ):
-        registry.register("mysql.oceanbase", "pyobvector.schema.dialect", "OceanBaseDialect")
+        registry.register(
+            "mysql.oceanbase", "pyobvector.schema.dialect", "OceanBaseDialect"
+        )
 
         setattr(func_mod, "l2_distance", l2_distance)
         setattr(func_mod, "cosine_distance", cosine_distance)
@@ -88,27 +90,31 @@ class ObClient:
             for table_name in tables:
                 if table_name in self.metadata_obj.tables:
                     self.metadata_obj.remove(Table(table_name, self.metadata_obj))
-            self.metadata_obj.reflect(bind=self.engine, only=tables, extend_existing=True)
+            self.metadata_obj.reflect(
+                bind=self.engine, only=tables, extend_existing=True
+            )
         else:
             self.metadata_obj.clear()
             self.metadata_obj.reflect(bind=self.engine, extend_existing=True)
 
     def _is_seekdb(self) -> bool:
         """Check if the database is SeekDB by querying version.
-        
+
         Returns:
             bool: True if database is SeekDB, False otherwise
         """
         is_seekdb = False
         try:
-            if hasattr(self, '_is_seekdb_cached'):
+            if hasattr(self, "_is_seekdb_cached"):
                 return self._is_seekdb_cached
             with self.engine.connect() as conn:
                 result = conn.execute(text("SELECT VERSION()"))
                 version_str = [r[0] for r in result][0]
                 is_seekdb = "SeekDB" in version_str
                 self._is_seekdb_cached = is_seekdb
-                logger.debug(f"Version query result: {version_str}, is_seekdb: {is_seekdb}")
+                logger.debug(
+                    f"Version query result: {version_str}, is_seekdb: {is_seekdb}"
+                )
         except Exception as e:
             logger.warning(f"Failed to query version: {e}")
         return is_seekdb
@@ -414,10 +420,12 @@ class ObClient:
                 if partition_names is None:
                     execute_res = conn.execute(stmt)
                 else:
-                    stmt_str = str(stmt.compile(
-                        dialect=self.engine.dialect,
-                        compile_kwargs={"literal_binds": True}
-                    ))
+                    stmt_str = str(
+                        stmt.compile(
+                            dialect=self.engine.dialect,
+                            compile_kwargs={"literal_binds": True},
+                        )
+                    )
                     stmt_str = self._insert_partition_hint_for_query_sql(
                         stmt_str, f"PARTITION({', '.join(partition_names)})"
                     )
@@ -451,9 +459,7 @@ class ObClient:
 
         with self.engine.connect() as conn:
             with conn.begin():
-                conn.execute(
-                    text(f"ALTER TABLE `{table_name}` {columns_ddl}")
-                )
+                conn.execute(text(f"ALTER TABLE `{table_name}` {columns_ddl}"))
 
         self.refresh_metadata([table_name])
 
@@ -472,8 +478,6 @@ class ObClient:
 
         with self.engine.connect() as conn:
             with conn.begin():
-                conn.execute(
-                    text(f"ALTER TABLE `{table_name}` {columns_ddl}")
-                )
+                conn.execute(text(f"ALTER TABLE `{table_name}` {columns_ddl}"))
 
         self.refresh_metadata([table_name])
