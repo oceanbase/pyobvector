@@ -1,4 +1,5 @@
 """ARRAY: An extended data type for SQLAlchemy"""
+
 import json
 from typing import Any, Optional, Union
 from collections.abc import Sequence
@@ -9,6 +10,7 @@ from sqlalchemy.types import UserDefinedType, String
 
 class ARRAY(UserDefinedType):
     """ARRAY data type definition with support for up to 6 levels of nesting."""
+
     cache_ok = True
     _string = String()
 
@@ -32,7 +34,7 @@ class ARRAY(UserDefinedType):
 
     def get_col_spec(self, **kw):  # pylint: disable=unused-argument
         """Parse to array data type definition in text SQL."""
-        if hasattr(self.item_type, 'get_col_spec'):
+        if hasattr(self.item_type, "get_col_spec"):
             base_type = self.item_type.get_col_spec(**kw)
         else:
             base_type = str(self.item_type)
@@ -50,7 +52,9 @@ class ARRAY(UserDefinedType):
 
     def _validate_dimension(self, value: list[Any]):
         arr_depth = self._get_list_depth(value)
-        assert arr_depth == self.dim, f"Array dimension mismatch, expected {self.dim}, got {arr_depth}"
+        assert arr_depth == self.dim, (
+            f"Array dimension mismatch, expected {self.dim}, got {arr_depth}"
+        )
 
     def bind_processor(self, dialect):
         item_type = self.item_type

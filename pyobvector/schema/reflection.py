@@ -1,14 +1,21 @@
 """OceanBase table definition reflection."""
+
 import re
 import logging
-from sqlalchemy.dialects.mysql.reflection import MySQLTableDefinitionParser, _re_compile, cleanup_text
+from sqlalchemy.dialects.mysql.reflection import (
+    MySQLTableDefinitionParser,
+    _re_compile,
+    cleanup_text,
+)
 
 from pyobvector.schema.array import ARRAY
 
 logger = logging.getLogger(__name__)
 
+
 class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
     """OceanBase table definition parser."""
+
     def __init__(self, dialect, preparer, *, default_schema=None):
         MySQLTableDefinitionParser.__init__(self, dialect, preparer)
         self.default_schema = default_schema
@@ -82,15 +89,19 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
         m = self._re_array_column.match(line)
         if m:
             spec = m.groupdict()
-            name, coltype_with_args = spec["name"].strip(), spec["coltype_with_args"].strip()
+            name, coltype_with_args = (
+                spec["name"].strip(),
+                spec["coltype_with_args"].strip(),
+            )
 
             item_pattern = re.compile(
-                r"^(?:array\s*\()*([\w]+)(?:\(([\d,]+)\))?\)*$",
-                re.IGNORECASE
+                r"^(?:array\s*\()*([\w]+)(?:\(([\d,]+)\))?\)*$", re.IGNORECASE
             )
             item_m = item_pattern.match(coltype_with_args)
             if not item_m:
-                raise ValueError(f"Failed to find inner type from array column definition: {line}")
+                raise ValueError(
+                    f"Failed to find inner type from array column definition: {line}"
+                )
 
             item_type = self.dialect.ischema_names[item_m.group(1).lower()]
             item_type_arg = item_m.group(2)
@@ -99,9 +110,11 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
             elif item_type_arg[0] == "'" and item_type_arg[-1] == "'":
                 item_type_args = self._re_csv_str.findall(item_type_arg)
             else:
-                item_type_args = [int(v) for v in self._re_csv_int.findall(item_type_arg)]
+                item_type_args = [
+                    int(v) for v in self._re_csv_int.findall(item_type_arg)
+                ]
 
-            nested_level = coltype_with_args.lower().count('array')
+            nested_level = coltype_with_args.lower().count("array")
             type_instance = item_type(*item_type_args)
             for _ in range(nested_level):
                 type_instance = ARRAY(type_instance)
@@ -144,7 +157,11 @@ class OceanBaseTableDefinitionParser(MySQLTableDefinitionParser):
 
             if tp == "fk_constraint":
                 table = spec.get("table", [])
-                if isinstance(table, list) and len(table) == 2 and table[0] == self.default_schema:
+                if (
+                    isinstance(table, list)
+                    and len(table) == 2
+                    and table[0] == self.default_schema
+                ):
                     spec["table"] = table[1:]
 
             for action in ["onupdate", "ondelete"]:

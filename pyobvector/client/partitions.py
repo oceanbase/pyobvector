@@ -1,4 +1,5 @@
 """A module to do compilation of OceanBase Parition Clause."""
+
 from typing import Optional, Union
 import logging
 from dataclasses import dataclass
@@ -11,6 +12,7 @@ logger.setLevel(logging.DEBUG)
 
 class PartType(IntEnum):
     """Partition type of table or collection for both ObVecClient and MilvusLikeClient"""
+
     Range = 0
     Hash = 1
     Key = 2
@@ -21,12 +23,13 @@ class PartType(IntEnum):
 
 class ObPartition:
     """Base class of all kind of Partition strategy
-    
+
     Attributes:
     part_type (PartType) : type of partition strategy
     sub_partition (ObPartition) : subpartition strategy
     is_sub (bool) : this partition strategy is a subpartition or not
     """
+
     def __init__(self, part_type: PartType):
         self.part_type = part_type
         self.sub_partition = None
@@ -38,7 +41,7 @@ class ObPartition:
 
     def add_subpartition(self, sub_part):
         """Add subpartition strategy to current partition.
-        
+
         Args:
             sub_part (ObPartition) : subpartition strategy
         """
@@ -60,14 +63,15 @@ class ObPartition:
 @dataclass
 class RangeListPartInfo:
     """Range/RangeColumns/List/ListColumns partition info for each partition.
-    
+
     Attributes:
     part_name (string) : partition name
-    part_upper_bound_expr (Union[List, str, int]) : 
-        For example, using `[1,2]`/`'DEFAULT'` as default case/`7` when create 
+    part_upper_bound_expr (Union[List, str, int]) :
+        For example, using `[1,2]`/`'DEFAULT'` as default case/`7` when create
         List/ListColumns partition.
         Using 100 / `MAXVALUE` when create Range/RangeColumns partition.
     """
+
     part_name: str
     part_upper_bound_expr: Union[list, str, int]
 
@@ -84,6 +88,7 @@ class RangeListPartInfo:
 
 class ObRangePartition(ObPartition):
     """Range/RangeColumns partition strategy."""
+
     def __init__(
         self,
         is_range_columns: bool,
@@ -117,18 +122,24 @@ class ObRangePartition(ObPartition):
             assert self.range_expr is not None
             if self.sub_partition is None:
                 return f"RANGE ({self.range_expr}) ({self._parse_range_part_list()})"
-            return f"RANGE ({self.range_expr}) {self.sub_partition.do_compile()} " \
-                    f"({self._parse_range_part_list()})"
+            return (
+                f"RANGE ({self.range_expr}) {self.sub_partition.do_compile()} "
+                f"({self._parse_range_part_list()})"
+            )
         assert self.col_name_list is not None
         if self.sub_partition is None:
-            return f"RANGE COLUMNS ({','.join(self.col_name_list)}) " \
-                    f"({self._parse_range_part_list()})"
-        return f"RANGE COLUMNS ({','.join(self.col_name_list)}) " \
-                f"{self.sub_partition.do_compile()} ({self._parse_range_part_list()})"
+            return (
+                f"RANGE COLUMNS ({','.join(self.col_name_list)}) "
+                f"({self._parse_range_part_list()})"
+            )
+        return (
+            f"RANGE COLUMNS ({','.join(self.col_name_list)}) "
+            f"{self.sub_partition.do_compile()} ({self._parse_range_part_list()})"
+        )
 
     def _parse_range_part_list(self) -> str:
         range_partitions_complied = [
-            f"PARTITION {range_part_info.part_name} VALUES LESS THAN " \
+            f"PARTITION {range_part_info.part_name} VALUES LESS THAN "
             f"({range_part_info.get_part_expr_str()})"
             for range_part_info in self.range_part_infos
         ]
@@ -137,6 +148,7 @@ class ObRangePartition(ObPartition):
 
 class ObSubRangePartition(ObRangePartition):
     """Range/RangeColumns subpartition strategy."""
+
     def __init__(
         self,
         is_range_columns: bool,
@@ -155,16 +167,20 @@ class ObSubRangePartition(ObRangePartition):
         if self.part_type == PartType.Range:
             assert self.range_expr is not None
             assert self.sub_partition is None
-            return f"RANGE ({self.range_expr}) SUBPARTITION TEMPLATE " \
-                   f"({self._parse_range_part_list()})"
+            return (
+                f"RANGE ({self.range_expr}) SUBPARTITION TEMPLATE "
+                f"({self._parse_range_part_list()})"
+            )
         assert self.col_name_list is not None
         assert self.sub_partition is None
-        return f"RANGE COLUMNS ({','.join(self.col_name_list)}) SUBPARTITION TEMPLATE " \
-                f"({self._parse_range_part_list()})"
+        return (
+            f"RANGE COLUMNS ({','.join(self.col_name_list)}) SUBPARTITION TEMPLATE "
+            f"({self._parse_range_part_list()})"
+        )
 
     def _parse_range_part_list(self) -> str:
         range_partitions_complied = [
-            f"SUBPARTITION {range_part_info.part_name} VALUES LESS THAN " \
+            f"SUBPARTITION {range_part_info.part_name} VALUES LESS THAN "
             f"({range_part_info.get_part_expr_str()})"
             for range_part_info in self.range_part_infos
         ]
@@ -173,6 +189,7 @@ class ObSubRangePartition(ObRangePartition):
 
 class ObListPartition(ObPartition):
     """List/ListColumns partition strategy."""
+
     def __init__(
         self,
         is_list_columns: bool,
@@ -206,14 +223,20 @@ class ObListPartition(ObPartition):
             assert self.list_expr is not None
             if self.sub_partition is None:
                 return f"LIST ({self.list_expr}) ({self._parse_list_part_list()})"
-            return f"LIST ({self.list_expr}) {self.sub_partition.do_compile()} " \
-                    f"({self._parse_list_part_list()})"
+            return (
+                f"LIST ({self.list_expr}) {self.sub_partition.do_compile()} "
+                f"({self._parse_list_part_list()})"
+            )
         assert self.col_name_list is not None
         if self.sub_partition is None:
-            return f"LIST COLUMNS ({','.join(self.col_name_list)}) " \
-                    f"({self._parse_list_part_list()})"
-        return f"LIST COLUMNS ({','.join(self.col_name_list)}) " \
-                f"{self.sub_partition.do_compile()} ({self._parse_list_part_list()})"
+            return (
+                f"LIST COLUMNS ({','.join(self.col_name_list)}) "
+                f"({self._parse_list_part_list()})"
+            )
+        return (
+            f"LIST COLUMNS ({','.join(self.col_name_list)}) "
+            f"{self.sub_partition.do_compile()} ({self._parse_list_part_list()})"
+        )
 
     def _parse_list_part_list(self) -> str:
         list_partitions_complied = [
@@ -225,6 +248,7 @@ class ObListPartition(ObPartition):
 
 class ObSubListPartition(ObListPartition):
     """List/ListColumns subpartition strategy."""
+
     def __init__(
         self,
         is_list_columns: bool,
@@ -246,12 +270,14 @@ class ObSubListPartition(ObListPartition):
             return f"LIST ({self.list_expr}) SUBPARTITION TEMPLATE ({self._parse_list_part_list()})"
         assert self.col_name_list is not None
         assert self.sub_partition is None
-        return f"LIST COLUMNS ({','.join(self.col_name_list)}) SUBPARTITION TEMPLATE " \
-                f"({self._parse_list_part_list()})"
+        return (
+            f"LIST COLUMNS ({','.join(self.col_name_list)}) SUBPARTITION TEMPLATE "
+            f"({self._parse_list_part_list()})"
+        )
 
     def _parse_list_part_list(self) -> str:
         list_partitions_complied = [
-            f"SUBPARTITION {list_part_info.part_name} VALUES IN " \
+            f"SUBPARTITION {list_part_info.part_name} VALUES IN "
             f"({list_part_info.get_part_expr_str()})"
             for list_part_info in self.list_part_infos
         ]
@@ -260,6 +286,7 @@ class ObSubListPartition(ObListPartition):
 
 class ObHashPartition(ObPartition):
     """Hash partition strategy."""
+
     def __init__(
         self,
         hash_expr: str,
@@ -279,7 +306,7 @@ class ObHashPartition(ObPartition):
 
         if self.part_count is not None and self.hash_part_name_list is not None:
             logging.warning(
-                "part_count & hash_part_name_list are both set, " \
+                "part_count & hash_part_name_list are both set, "
                 "hash_part_name_list will be override by part_count"
             )
 
@@ -291,13 +318,17 @@ class ObHashPartition(ObPartition):
         if self.part_count is not None:
             if self.sub_partition is None:
                 return f"HASH ({self.hash_expr}) PARTITIONS {self.part_count}"
-            return f"HASH ({self.hash_expr}) {self.sub_partition.do_compile()} " \
-                    f"PARTITIONS {self.part_count}"
+            return (
+                f"HASH ({self.hash_expr}) {self.sub_partition.do_compile()} "
+                f"PARTITIONS {self.part_count}"
+            )
         assert self.hash_part_name_list is not None
         if self.sub_partition is None:
             return f"HASH ({self.hash_expr}) ({self._parse_hash_part_list()})"
-        return f"HASH ({self.hash_expr}) {self.sub_partition.do_compile()} " \
-                f"({self._parse_hash_part_list()})"
+        return (
+            f"HASH ({self.hash_expr}) {self.sub_partition.do_compile()} "
+            f"({self._parse_hash_part_list()})"
+        )
 
     def _parse_hash_part_list(self):
         return ",".join([f"PARTITION {name}" for name in self.hash_part_name_list])
@@ -305,6 +336,7 @@ class ObHashPartition(ObPartition):
 
 class ObSubHashPartition(ObHashPartition):
     """Hash subpartition strategy."""
+
     def __init__(
         self,
         hash_expr: str,
@@ -332,6 +364,7 @@ class ObSubHashPartition(ObHashPartition):
 
 class ObKeyPartition(ObPartition):
     """Key partition strategy."""
+
     def __init__(
         self,
         col_name_list: list[str],
@@ -351,7 +384,7 @@ class ObKeyPartition(ObPartition):
 
         if self.part_count is not None and self.key_part_name_list is not None:
             logging.warning(
-                "part_count & key_part_name_list are both set, " \
+                "part_count & key_part_name_list are both set, "
                 "key_part_name_list will be override by part_count"
             )
 
@@ -365,13 +398,19 @@ class ObKeyPartition(ObPartition):
                 return (
                     f"KEY ({','.join(self.col_name_list)}) PARTITIONS {self.part_count}"
                 )
-            return f"KEY ({','.join(self.col_name_list)}) {self.sub_partition.do_compile()} " \
-                    f"PARTITIONS {self.part_count}"
+            return (
+                f"KEY ({','.join(self.col_name_list)}) {self.sub_partition.do_compile()} "
+                f"PARTITIONS {self.part_count}"
+            )
         assert self.key_part_name_list is not None
         if self.sub_partition is None:
-            return f"KEY ({','.join(self.col_name_list)}) ({self._parse_key_part_list()})"
-        return f"KEY ({','.join(self.col_name_list)}) {self.sub_partition.do_compile()} " \
-                f"({self._parse_key_part_list()})"
+            return (
+                f"KEY ({','.join(self.col_name_list)}) ({self._parse_key_part_list()})"
+            )
+        return (
+            f"KEY ({','.join(self.col_name_list)}) {self.sub_partition.do_compile()} "
+            f"({self._parse_key_part_list()})"
+        )
 
     def _parse_key_part_list(self):
         return ",".join([f"PARTITION {name}" for name in self.key_part_name_list])
@@ -379,6 +418,7 @@ class ObKeyPartition(ObPartition):
 
 class ObSubKeyPartition(ObKeyPartition):
     """Key subpartition strategy."""
+
     def __init__(
         self,
         col_name_list: list[str],
@@ -400,8 +440,10 @@ class ObSubKeyPartition(ObKeyPartition):
             )
         assert self.key_part_name_list is not None
         assert self.sub_partition is None
-        return f"KEY ({','.join(self.col_name_list)}) SUBPARTITION TEMPLATE " \
-                f"({self._parse_key_part_list()})"
+        return (
+            f"KEY ({','.join(self.col_name_list)}) SUBPARTITION TEMPLATE "
+            f"({self._parse_key_part_list()})"
+        )
 
     def _parse_key_part_list(self):
         return ",".join([f"SUBPARTITION {name}" for name in self.key_part_name_list])

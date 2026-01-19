@@ -20,13 +20,19 @@
 * CreateFtsIndex    Full Text Search Index Creation statement clause
 * MatchAgainst      Full Text Search clause
 """
+
 from .array import ARRAY
 from .vector import VECTOR
 from .sparse_vector import SPARSE_VECTOR
 from .geo_srid_point import POINT
 from .vector_index import VectorIndex, CreateVectorIndex
 from .ob_table import ObTable
-from .vec_dist_func import l2_distance, cosine_distance, inner_product, negative_inner_product
+from .vec_dist_func import (
+    l2_distance,
+    cosine_distance,
+    inner_product,
+    negative_inner_product,
+)
 from .gis_func import ST_GeomFromText, st_distance, st_dwithin, st_astext
 from .replace_stmt import ReplaceStmt
 from .dialect import OceanBaseDialect, AsyncOceanBaseDialect

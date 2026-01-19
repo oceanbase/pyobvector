@@ -36,10 +36,10 @@ jobs:
         run: uv sync --dev
 
       - name: Lint
-        run: uv run ruff check
+        run: make check
 
       - name: Package build test
-        run: uv build
+        run: make build
 
       - name: Free disk space
         uses: kfir4444/free-disk-space@main
@@ -64,4 +64,4 @@ jobs:
 
       - name: Run tests
         run: |
-          uv run pytest --log-cli-level=INFO ${{ matrix.test_filter }}
+          make test TEST_FILTER='${{ matrix.test_filter }}'

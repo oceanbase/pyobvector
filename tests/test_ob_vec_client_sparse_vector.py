@@ -6,10 +6,11 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 class ObVecClientTestSparseVector(unittest.TestCase):
     def setUp(self) -> None:
         self.client = ObVecClient()
-    
+
     def test_create_collection_with_sparse_vector(self):
         table_name = "obvec_t1_spiv"
         self.client.drop_table_if_exist(table_name)
@@ -24,7 +25,7 @@ class ObVecClientTestSparseVector(unittest.TestCase):
             table_name=table_name,
             columns=cols,
         )
-    
+
     def test_create_sparse_vector_collection_with_index(self):
         table_name = "obvec_t2_spiv"
         self.client.drop_table_if_exist(table_name)
@@ -74,18 +75,18 @@ class ObVecClientTestSparseVector(unittest.TestCase):
         data = [
             {
                 "text": "information retrieval is a field of study.",
-                "sparse_vector": {1: 0.5, 100: 0.3, 500: 0.8}
+                "sparse_vector": {1: 0.5, 100: 0.3, 500: 0.8},
             },
             {
                 "text": "information retrieval focuses on finding relevant information in large datasets.",
-                "sparse_vector": {10: 0.1, 200: 0.7, 1000: 0.9}
-            }
+                "sparse_vector": {10: 0.1, 200: 0.7, 1000: 0.9},
+            },
         ]
         self.client.insert(
             table_name=table_name,
             data=data,
         )
-    
+
     def test_similarity_search(self):
         table_name = "obvec_sparse_vec_simlarity_search"
         self.client.drop_table_if_exist(table_name)
@@ -112,16 +113,13 @@ class ObVecClientTestSparseVector(unittest.TestCase):
         data = [
             {
                 "text": "information retrieval is a field of study.",
-                "sparse_vector": {1: 0.5, 100: 0.3, 500: 0.8}
+                "sparse_vector": {1: 0.5, 100: 0.3, 500: 0.8},
             },
             {
                 "text": "information retrieval focuses on finding relevant information in large datasets.",
-                "sparse_vector": {10: 0.1, 200: 0.7, 1000: 0.9}
+                "sparse_vector": {10: 0.1, 200: 0.7, 1000: 0.9},
             },
-            {
-                "text": "Hello, world!",
-                "sparse_vector": {1: 0.7, 50: 0.7, 1000: 0.9}
-            }
+            {"text": "Hello, world!", "sparse_vector": {1: 0.7, 50: 0.7, 1000: 0.9}},
         ]
         self.client.insert(
             table_name=table_name,
@@ -141,9 +139,13 @@ class ObVecClientTestSparseVector(unittest.TestCase):
         self.assertEqual(
             res.fetchall(),
             [
-                (3, 'Hello, world!', '{1:0.7,50:0.7,1000:0.9}'),
-                (2, 'information retrieval focuses on finding relevant information in large datasets.', '{10:0.1,200:0.7,1000:0.9}')
-            ]
+                (3, "Hello, world!", "{1:0.7,50:0.7,1000:0.9}"),
+                (
+                    2,
+                    "information retrieval focuses on finding relevant information in large datasets.",
+                    "{10:0.1,200:0.7,1000:0.9}",
+                ),
+            ],
         )
 
     def test_sparse_vector_distance_calculation(self):
@@ -163,13 +165,13 @@ class ObVecClientTestSparseVector(unittest.TestCase):
 
         data = [
             {
-                "c2": {1:1.1, 2:2.2},
-                "c3": {1:2.4},
+                "c2": {1: 1.1, 2: 2.2},
+                "c3": {1: 2.4},
             },
             {
-                "c2": {1:1.5, 3:3.6},
-                "c3": {4:4.5},
-            }
+                "c2": {1: 1.5, 3: 3.6},
+                "c3": {4: 4.5},
+            },
         ]
         self.client.insert(
             table_name=table_name,
@@ -179,27 +181,18 @@ class ObVecClientTestSparseVector(unittest.TestCase):
         res = self.client.perform_raw_text_sql(
             f"select inner_product(c2,c3) from {table_name}"
         )
-        self.assertEqual(
-            res.fetchall(),
-            [(2.640000104904175,), (0.0,)]
-        )
+        self.assertEqual(res.fetchall(), [(2.640000104904175,), (0.0,)])
 
         res = self.client.perform_raw_text_sql(
             f"select negative_inner_product(c2,c3) from {table_name}"
         )
-        self.assertEqual(
-            res.fetchall(),
-            [(-2.640000104904175,), (0.0,)]
-        )
+        self.assertEqual(res.fetchall(), [(-2.640000104904175,), (0.0,)])
 
-        query = {1:2.4}
+        query = {1: 2.4}
         res = self.client.perform_raw_text_sql(
             f"select inner_product(c2,'{query}') from {table_name}"
         )
-        self.assertEqual(
-            res.fetchall(),
-            [(2.640000104904175,), (3.6000001430511475,)]
-        )
+        self.assertEqual(res.fetchall(), [(2.640000104904175,), (3.6000001430511475,)])
 
     def test_similarity_search_with_scalar_filter(self):
         table_name = "obvec_similarity_search_with_scalar_filter"
@@ -236,7 +229,7 @@ class ObVecClientTestSparseVector(unittest.TestCase):
             {
                 "c1": {1: 0.7, 50: 0.7, 1000: 0.9},
                 "c2": 1,
-            }
+            },
         ]
         self.client.insert(
             table_name=table_name,
@@ -256,14 +249,13 @@ class ObVecClientTestSparseVector(unittest.TestCase):
         )
         self.assertEqual(
             res.fetchall(),
-            [
-                (2, '{10:0.1,200:0.7,1000:0.9}', 4),
-                (1, '{1:0.5,100:0.3,500:0.8}', 10)
-            ]
+            [(2, "{10:0.1,200:0.7,1000:0.9}", 4), (1, "{1:0.5,100:0.3,500:0.8}", 10)],
         )
 
         # You can also use SQLAlchemy.Table
-        table = Table(table_name, self.client.metadata_obj, autoload_with=self.client.engine)
+        table = Table(
+            table_name, self.client.metadata_obj, autoload_with=self.client.engine
+        )
         res = self.client.ann_search(
             table_name=table_name,
             vec_data=query_data,
@@ -272,12 +264,9 @@ class ObVecClientTestSparseVector(unittest.TestCase):
             with_dist=False,
             topk=2,
             output_column_names=["pk", "c1", "c2"],
-            where_clause=[table.c["c2"] >= 4]
+            where_clause=[table.c["c2"] >= 4],
         )
         self.assertEqual(
             res.fetchall(),
-            [
-                (2, '{10:0.1,200:0.7,1000:0.9}', 4),
-                (1, '{1:0.5,100:0.3,500:0.8}', 10)
-            ]
+            [(2, "{10:0.1,200:0.7,1000:0.9}", 4), (1, "{1:0.5,100:0.3,500:0.8}", 10)],
         )

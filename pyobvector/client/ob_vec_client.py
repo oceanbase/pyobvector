@@ -1,4 +1,5 @@
 """OceanBase Vector Store Client."""
+
 import logging
 from typing import Optional, Union
 
@@ -44,18 +45,14 @@ class ObVecClient(ObClient):
         if self.ob_version < ObVersion.from_db_version_nums(4, 3, 3, 0):
             raise ClusterVersionException(
                 code=ErrorCode.NOT_SUPPORTED,
-                message=ExceptionsMessage.ClusterVersionIsLow % ("Vector Store", "4.3.3.0"),
+                message=ExceptionsMessage.ClusterVersionIsLow
+                % ("Vector Store", "4.3.3.0"),
             )
 
-    def _get_sparse_vector_index_params(
-        self, vidxs: Optional[IndexParams]
-    ):
+    def _get_sparse_vector_index_params(self, vidxs: Optional[IndexParams]):
         if vidxs is None:
             return None
-        return [
-            vidx for vidx in vidxs
-            if vidx.is_index_type_sparse_vector()
-        ]
+        return [vidx for vidx in vidxs if vidx.is_index_type_sparse_vector()]
 
     def create_table_with_index_params(
         self,
@@ -100,10 +97,10 @@ class ObVecClient(ObClient):
                     )
                 if sparse_vidxs is not None and len(sparse_vidxs) > 0:
                     create_table_sql = str(CreateTable(table).compile(self.engine))
-                    new_sql = create_table_sql[:create_table_sql.rfind(')')]
+                    new_sql = create_table_sql[: create_table_sql.rfind(")")]
                     for sparse_vidx in sparse_vidxs:
                         sparse_params = sparse_vidx._parse_kwargs()
-                        if 'type' in sparse_params:
+                        if "type" in sparse_params:
                             new_sql += f",\n\tVECTOR INDEX {sparse_vidx.index_name}({sparse_vidx.field_name}) with (type={sparse_params['type']}, distance=inner_product)"
                         else:
                             new_sql += f",\n\tVECTOR INDEX {sparse_vidx.index_name}({sparse_vidx.field_name}) with (distance=inner_product)"
@@ -130,7 +127,9 @@ class ObVecClient(ObClient):
                 # create fts indexes
                 if fts_idxs is not None:
                     for fts_idx in fts_idxs:
-                        idx_cols = [table.c[field_name] for field_name in fts_idx.field_names]
+                        idx_cols = [
+                            table.c[field_name] for field_name in fts_idx.field_names
+                        ]
                         fts_idx = FtsIndex(
                             fts_idx.index_name,
                             fts_idx.param_str(),
@@ -195,7 +194,7 @@ class ObVecClient(ObClient):
         fts_idx_param: FtsIndexParam,
     ):
         """Create fts index with fts index parameter.
-        
+
         Args:
             table_name (string): table name
             fts_idx_param (FtsIndexParam): fts index parameter
@@ -203,7 +202,9 @@ class ObVecClient(ObClient):
         table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
         with self.engine.connect() as conn:
             with conn.begin():
-                idx_cols = [table.c[field_name] for field_name in fts_idx_param.field_names]
+                idx_cols = [
+                    table.c[field_name] for field_name in fts_idx_param.field_names
+                ]
                 fts_idx = FtsIndex(
                     fts_idx_param.index_name,
                     fts_idx_param.param_str(),
@@ -335,11 +336,7 @@ class ObVecClient(ObClient):
                     )
                 )
             else:
-                columns.append(
-                    distance_func(
-                        table.c[vec_column_name], f"{vec_data}"
-                    )
-                )
+                columns.append(distance_func(table.c[vec_column_name], f"{vec_data}"))
         # if idx_name_hint is not None:
         #     stmt = select(*columns).with_hint(
         #         table,
@@ -360,9 +357,7 @@ class ObVecClient(ObClient):
                     "[" + ",".join([str(np.float32(v)) for v in vec_data]) + "]",
                 )
             else:
-                dist_expr = distance_func(
-                    table.c[vec_column_name], f"{vec_data}"
-                )
+                dist_expr = distance_func(table.c[vec_column_name], f"{vec_data}")
             stmt = stmt.where(dist_expr <= distance_threshold)
 
         if isinstance(vec_data, list):
@@ -373,23 +368,23 @@ class ObVecClient(ObClient):
                 )
             )
         else:
-            stmt = stmt.order_by(
-                distance_func(
-                    table.c[vec_column_name], f"{vec_data}"
+            stmt = stmt.order_by(distance_func(table.c[vec_column_name], f"{vec_data}"))
+        stmt_str = (
+            str(
+                stmt.compile(
+                    dialect=self.engine.dialect, compile_kwargs={"literal_binds": True}
                 )
             )
-        stmt_str = (
-            str(stmt.compile(
-                dialect=self.engine.dialect,
-                compile_kwargs={"literal_binds": True}
-            ))
             + f" APPROXIMATE limit {topk}"
         )
         with self.engine.connect() as conn:
             with conn.begin():
                 if idx_name_hint is not None:
                     idx = stmt_str.find("SELECT ")
-                    stmt_str = f"SELECT /*+ index({table_name} {idx_name_hint}) */ " + stmt_str[idx + len("SELECT "):]
+                    stmt_str = (
+                        f"SELECT /*+ index({table_name} {idx_name_hint}) */ "
+                        + stmt_str[idx + len("SELECT ") :]
+                    )
 
                 if partition_names is None:
                     return conn.execute(text(stmt_str))
@@ -433,7 +428,9 @@ class ObVecClient(ObClient):
 
         columns = []
         if output_column_names is not None:
-            columns.extend([table.c[column_name] for column_name in output_column_names])
+            columns.extend(
+                [table.c[column_name] for column_name in output_column_names]
+            )
         else:
             columns.extend([table.c[column.name] for column in table.columns])
         if extra_output_cols is not None:
@@ -462,16 +459,20 @@ class ObVecClient(ObClient):
                 if partition_names is None:
                     if str_list is not None:
                         str_list.append(
-                            str(stmt.compile(
-                                dialect=self.engine.dialect,
-                                compile_kwargs={"literal_binds": True}
-                            ))
+                            str(
+                                stmt.compile(
+                                    dialect=self.engine.dialect,
+                                    compile_kwargs={"literal_binds": True},
+                                )
+                            )
                         )
                     return conn.execute(stmt)
-                stmt_str = str(stmt.compile(
-                    dialect=self.engine.dialect,
-                    compile_kwargs={"literal_binds": True}
-                ))
+                stmt_str = str(
+                    stmt.compile(
+                        dialect=self.engine.dialect,
+                        compile_kwargs={"literal_binds": True},
+                    )
+                )
                 stmt_str = self._insert_partition_hint_for_query_sql(
                     stmt_str, f"PARTITION({', '.join(partition_names)})"
                 )

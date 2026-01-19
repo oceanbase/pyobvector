@@ -7,10 +7,11 @@ from sqlglot import parse_one
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 class OceanBaseDialectTest(unittest.TestCase):
     def setUp(self) -> None:
         return super().setUp()
-    
+
     def test_drop_column(self):
         sql = "ALTER TABLE users DROP COLUMN age"
         ob_ast = parse_one(sql, dialect="oceanbase")

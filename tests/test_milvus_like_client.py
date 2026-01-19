@@ -4,9 +4,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class ObMilkClientTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.client = MilvusLikeClient() # Set your link string.
+        self.client = MilvusLikeClient()  # Set your link string.
 
     def test_create_collection_default(self):
         self.client.drop_collection("items1")
@@ -330,7 +331,7 @@ class ObMilkClientTest(unittest.TestCase):
         res = self.client.query(
             collection_name=test_collection_name, output_fields=["id"]
         )
-        self.assertEqual(set([r['id'] for r in res]), set([112, 190, 12, 90]))
+        self.assertEqual(set([r["id"] for r in res]), set([112, 190, 12, 90]))
 
         table = self.client.load_table(collection_name=test_collection_name)
         where_clause = [table.c["id"] < 100]
@@ -339,7 +340,7 @@ class ObMilkClientTest(unittest.TestCase):
             output_fields=["id"],
             flter=where_clause,
         )
-        self.assertEqual(set([r['id'] for r in res]), set([12, 90]))
+        self.assertEqual(set([r["id"] for r in res]), set([12, 90]))
 
         res = self.client.query(
             collection_name=test_collection_name, flter=where_clause
@@ -410,9 +411,7 @@ class ObMilkClientTest(unittest.TestCase):
             limit=5,
             output_fields=["id"],
         )
-        self.assertEqual(
-            set([r['id'] for r in res]), set([12, 111, 11, 112, 10])
-        )
+        self.assertEqual(set([r["id"] for r in res]), set([12, 111, 11, 112, 10]))
 
         res = self.client.search(
             collection_name=test_collection_name,
@@ -424,7 +423,7 @@ class ObMilkClientTest(unittest.TestCase):
             with_dist=True,
         )
         self.assertEqual(set([111, 112]), set([r["id"] for r in res]))
-    
+
     def test_ann_search_inner_product(self):
         test_collection_name = "ann_test_ip"
         self.client.drop_collection(test_collection_name)
@@ -470,12 +469,10 @@ class ObMilkClientTest(unittest.TestCase):
             anns_field="embedding",
             limit=5,
             output_fields=["id"],
-            search_params={"metric_type": "neg_ip"}
+            search_params={"metric_type": "neg_ip"},
         )
-        self.assertEqual(
-            set([r['id'] for r in res]), set([12, 111, 11, 112, 10])
-        )
-    
+        self.assertEqual(set([r["id"] for r in res]), set([12, 111, 11, 112, 10]))
+
     def test_ann_search_cosine(self):
         test_collection_name = "ann_test_cosine"
         self.client.drop_collection(test_collection_name)
@@ -513,7 +510,7 @@ class ObMilkClientTest(unittest.TestCase):
             anns_field="embedding",
             limit=5,
             output_fields=["id"],
-            search_params={"metric_type": "cosine"}
+            search_params={"metric_type": "cosine"},
         )
 
     def test_upsert_data(self):
@@ -549,14 +546,14 @@ class ObMilkClientTest(unittest.TestCase):
         )
 
         data = [
-            {"id": 112, "embedding": [1, 2, 3], "meta": {'doc':'hhh1'}},
-            {"id": 190, "embedding": [0.13, 0.123, 1.213], "meta": {'doc':'hhh2'}},
+            {"id": 112, "embedding": [1, 2, 3], "meta": {"doc": "hhh1"}},
+            {"id": 190, "embedding": [0.13, 0.123, 1.213], "meta": {"doc": "hhh2"}},
         ]
         self.client.upsert(collection_name=test_collection_name, data=data)
 
         data = [
-            {"id": 112, "embedding": [0, 0, 0], "meta": {'doc':'HHH1'}},
-            {"id": 190, "embedding": [0, 0, 0], "meta": {'doc':'HHH2'}},
+            {"id": 112, "embedding": [0, 0, 0], "meta": {"doc": "HHH1"}},
+            {"id": 190, "embedding": [0, 0, 0], "meta": {"doc": "HHH2"}},
         ]
         self.client.upsert(collection_name=test_collection_name, data=data)
 
@@ -619,7 +616,7 @@ class ObMilkClientTest(unittest.TestCase):
             ids=[80, 12, 112],
         )
         self.assertEqual(len(res), 2)
-        self.assertEqual(set([r['id'] for r in res]), set([12, 112]))
+        self.assertEqual(set([r["id"] for r in res]), set([12, 112]))
 
         res = self.client.get(
             collection_name=test_collection_name,
@@ -718,10 +715,10 @@ class ObMilkClientTest(unittest.TestCase):
             range_expr="id",
         )
         schema = CollectionSchema(
-            fields = [
+            fields=[
                 FieldSchema(name="id", dtype=DataType.INT64, is_primary=True),
                 FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=3),
-                FieldSchema(name="meta", dtype=DataType.JSON)
+                FieldSchema(name="meta", dtype=DataType.JSON),
             ],
             partitions=range_part,
         )
@@ -740,7 +737,7 @@ class ObMilkClientTest(unittest.TestCase):
             schema=schema,
             index_params=idx_params,
         )
-        
+
 
 if __name__ == "__main__":
     unittest.main()

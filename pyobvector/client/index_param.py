@@ -1,9 +1,12 @@
 """A module to specify vector index parameters for MilvusLikeClient"""
+
 from enum import Enum
 from typing import Union
 
+
 class VecIndexType(Enum):
     """Vector index algorithm type"""
+
     HNSW = 0
     HNSW_SQ = 1
     IVFFLAT = 2
@@ -11,21 +14,23 @@ class VecIndexType(Enum):
     IVFPQ = 4
     DAAT = 5
 
+
 class IndexParam:
     """Vector index parameters.
-    
+
     Attributes:
     index_name (string) : vector index name
     field_name (string) : vector index built on which field
     index_type (VecIndexType) :
         vector index algorithms (Only HNSW supported)
-    kwargs : 
+    kwargs :
         vector index parameters for different algorithms
     """
+
     HNSW_DEFAULT_M = 16
     HNSW_DEFAULT_EF_CONSTRUCTION = 200
     HNSW_DEFAULT_EF_SEARCH = 40
-    OCEANBASE_DEFAULT_ALGO_LIB = 'vsag'
+    OCEANBASE_DEFAULT_ALGO_LIB = "vsag"
     HNSW_ALGO_NAME = "hnsw"
     HNSW_SQ_ALGO_NAME = "hnsw_sq"
     IVFFLAT_ALGO_NAME = "ivf_flat"
@@ -34,7 +39,11 @@ class IndexParam:
     DAAT_ALGO_NAME = "daat"
 
     def __init__(
-        self, index_name: str, field_name: str, index_type: Union[VecIndexType, str], **kwargs
+        self,
+        index_name: str,
+        field_name: str,
+        index_type: Union[VecIndexType, str],
+        **kwargs,
     ):
         self.index_name = index_name
         self.field_name = field_name
@@ -44,21 +53,22 @@ class IndexParam:
 
     def is_index_type_hnsw_serial(self):
         return self.index_type in [
-            IndexParam.HNSW_ALGO_NAME, IndexParam.HNSW_SQ_ALGO_NAME
+            IndexParam.HNSW_ALGO_NAME,
+            IndexParam.HNSW_SQ_ALGO_NAME,
         ]
-    
+
     def is_index_type_ivf_serial(self):
         return self.index_type in [
             IndexParam.IVFFLAT_ALGO_NAME,
             IndexParam.IVFSQ_ALGO_NAME,
             IndexParam.IVFPQ_ALGO_NAME,
         ]
-    
+
     def is_index_type_product_quantization(self):
         return self.index_type in [
             IndexParam.IVFPQ_ALGO_NAME,
         ]
-    
+
     def is_index_type_sparse_vector(self):
         return self.index_type in [
             IndexParam.DAAT_ALGO_NAME,
@@ -97,48 +107,52 @@ class IndexParam:
         ob_params = {}
         # handle lib
         if self.is_index_type_hnsw_serial():
-            ob_params['lib'] = 'vsag'
+            ob_params["lib"] = "vsag"
         else:
-            ob_params['lib'] = 'OB'
+            ob_params["lib"] = "OB"
         # handle metric_type
-        ob_params['distance'] = "l2"
-        if 'metric_type' in self.kwargs:
-            ob_params['distance'] = self.kwargs['metric_type']
+        ob_params["distance"] = "l2"
+        if "metric_type" in self.kwargs:
+            ob_params["distance"] = self.kwargs["metric_type"]
         # handle param
         if self.is_index_type_ivf_serial():
-            if (self.is_index_type_product_quantization() and
-                'params' not in self.kwargs):
-                raise ValueError('params must be configured for IVF index type')
-            
-            if 'params' not in self.kwargs:
+            if (
+                self.is_index_type_product_quantization()
+                and "params" not in self.kwargs
+            ):
+                raise ValueError("params must be configured for IVF index type")
+
+            if "params" not in self.kwargs:
                 params = {}
             else:
-                params = self.kwargs['params']
-            
+                params = self.kwargs["params"]
+
             if self.is_index_type_product_quantization():
-                if 'm' not in params:
-                    raise ValueError('m must be configured for IVFSQ or IVFPQ')
-                ob_params['m'] = params['m']
-            if 'nlist' in params:
-                ob_params['nlist'] = params['nlist']
-            if 'samples_per_nlist' in params:
-                ob_params['samples_per_nlist'] = params['samples_per_nlist']
+                if "m" not in params:
+                    raise ValueError("m must be configured for IVFSQ or IVFPQ")
+                ob_params["m"] = params["m"]
+            if "nlist" in params:
+                ob_params["nlist"] = params["nlist"]
+            if "samples_per_nlist" in params:
+                ob_params["samples_per_nlist"] = params["samples_per_nlist"]
 
         if self.is_index_type_hnsw_serial():
-            if 'params' in self.kwargs:
-                params = self.kwargs['params']
-                if 'M' in params:
-                    ob_params['m'] = params['M']
-                if 'efConstruction' in params:
-                    ob_params['ef_construction'] = params['efConstruction']
-                if 'efSearch' in params:
-                    ob_params['ef_search'] = params['efSearch']
-        
+            if "params" in self.kwargs:
+                params = self.kwargs["params"]
+                if "M" in params:
+                    ob_params["m"] = params["M"]
+                if "efConstruction" in params:
+                    ob_params["ef_construction"] = params["efConstruction"]
+                if "efSearch" in params:
+                    ob_params["ef_search"] = params["efSearch"]
+
         if self.is_index_type_sparse_vector():
-            if ob_params['distance'] != 'inner_product':
-                raise ValueError("Metric type should be 'inner_product' for sparse vector index.")
-            if 'sparse_index_type' in self.kwargs:
-                ob_params['type'] = self.kwargs['sparse_index_type']
+            if ob_params["distance"] != "inner_product":
+                raise ValueError(
+                    "Metric type should be 'inner_product' for sparse vector index."
+                )
+            if "sparse_index_type" in self.kwargs:
+                ob_params["type"] = self.kwargs["sparse_index_type"]
         return ob_params
 
     def param_str(self):
@@ -172,6 +186,7 @@ class IndexParam:
 
 class IndexParams:
     """Vector index parameters for MilvusLikeClient"""
+
     def __init__(self):
         self._indexes = {}
 
@@ -179,7 +194,7 @@ class IndexParams:
         self, field_name: str, index_type: VecIndexType, index_name: str, **kwargs
     ):
         """Add `IndexParam` to `IndexParams`
-        
+
         Args:
             field_name (string): vector index built on which field
             index_type (VecIndexType): vector index algorithms (Only HNSW supported)

@@ -135,8 +135,8 @@ client.create_table(test_collection_name, columns=cols, partitions=range_part)
 
 # create vector index
 client.create_index(
-    test_collection_name, 
-    is_vec_index=True, 
+    test_collection_name,
+    is_vec_index=True,
     index_name='vidx',
     column_names=['embedding'],
     vidx_params='distance=l2, type=hnsw, lib=vsag',
@@ -160,8 +160,8 @@ client.insert(test_collection_name, data=data1)
 ```python
 # perform ann search with basic column selection
 res = self.client.ann_search(
-    test_collection_name, 
-    vec_data=[0,0,0], 
+    test_collection_name,
+    vec_data=[0,0,0],
     vec_column_name='embedding',
     distance_func=l2_distance,
     topk=5,
@@ -175,8 +175,8 @@ from sqlalchemy import Table, text, func
 
 table = Table(test_collection_name, client.metadata_obj, autoload_with=client.engine)
 res = self.client.ann_search(
-    test_collection_name, 
-    vec_data=[0,0,0], 
+    test_collection_name,
+    vec_data=[0,0,0],
     vec_column_name='embedding',
     distance_func=l2_distance,
     topk=5,
@@ -192,8 +192,8 @@ res = self.client.ann_search(
 
 # perform ann search with distance threshold (filter results by distance)
 res = self.client.ann_search(
-    test_collection_name, 
-    vec_data=[0,0,0], 
+    test_collection_name,
+    vec_data=[0,0,0],
     vec_column_name='embedding',
     distance_func=l2_distance,
     with_dist=True,
@@ -211,17 +211,17 @@ res = self.client.ann_search(
 The `ann_search` method supports flexible output column selection through the `output_columns` parameter:
 
 - **`output_columns`** (recommended): Accepts SQLAlchemy Column objects, expressions, or a mix of both
-  
+
   - Column objects: `table.c.id`, `table.c.name`
   - Expressions: `(table.c.age + 10).label('age_plus_10')`
   - JSON queries: `text("JSON_EXTRACT(meta, '$.key') as extracted_key")`
   - String functions: `func.concat(table.c.name, ' (', table.c.age, ')').label('name_age')`
 - **`output_column_names`** (legacy): Accepts list of column name strings
-  
+
   - Example: `['id', 'name', 'meta']`
 - **Parameter Priority**: `output_columns` takes precedence over `output_column_names` when both are provided
 - **`distance_threshold`** (optional): Filter results by distance threshold
-  
+
   - Type: `Optional[float]`
   - Only returns results where `distance <= threshold`
   - Example: `distance_threshold=0.5` returns only results with distance <= 0.5
@@ -430,4 +430,3 @@ You can also get the actual SQL that will be executed:
 sql = client.get_sql(index=test_table_name, body=body)
 print(sql)  # prints the SQL query
 ```
-
