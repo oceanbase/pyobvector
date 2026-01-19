@@ -64,4 +64,4 @@ jobs:
 
       - name: Run tests
         run: |
-          make test TEST_FILTER="${{ matrix.test_filter }}"
+          make test TEST_FILTER='${{ matrix.test_filter }}'
