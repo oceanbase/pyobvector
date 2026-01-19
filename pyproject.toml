@@ -25,7 +25,9 @@ Repository = "https://github.com/oceanbase/pyobvector.git"
 dev = [
     "pytest>=8.2.2",
     "pylint>=3.2.7",
+    "prek>=0.2.17",
     "ruff>=0.14.10",
+    "sphinx>=7.2.6",
 ]
 
 [tool.pytest.ini_options]
