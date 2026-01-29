@@ -110,7 +110,7 @@ class ObClient:
             with self.engine.connect() as conn:
                 result = conn.execute(text("SELECT VERSION()"))
                 version_str = [r[0] for r in result][0]
-                is_seekdb = "SeekDB" in version_str
+                is_seekdb = "seekdb" in version_str.lower()
                 self._is_seekdb_cached = is_seekdb
                 logger.debug(
                     f"Version query result: {version_str}, is_seekdb: {is_seekdb}"
