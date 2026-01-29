@@ -2,6 +2,11 @@
 
 This file documents all released versions and their notable changes for the pyobvector project. Changes are grouped by version and categorized as Added (new features), Changed (modifications), Fixed (bug fixes), and Security (security updates).
 
+## [0.2.23](https://github.com/oceanbase/pyobvector/compare/release-v0.2.22...release-v0.2.23) - 2026-01-29
+
+- Cchore: intro pre commit
+- Fix: make SeekDB version check case-insensitive
+
 ## [0.2.22](https://github.com/oceanbase/pyobvector/compare/release-v0.2.21...release-v0.2.22) - 2026-01-15
 
 - Fix: HybridSearch.search() crashes when OceanBase returns NULL for empty results
