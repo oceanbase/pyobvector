@@ -97,14 +97,20 @@ class ObVecClient(ObClient):
                     )
                 if sparse_vidxs is not None and len(sparse_vidxs) > 0:
                     create_table_sql = str(CreateTable(table).compile(self.engine))
-                    new_sql = create_table_sql[: create_table_sql.rfind(")")]
+                    # Preserve table options (e.g. ORGANIZATION=heap) after the closing ")"
+                    last_paren = create_table_sql.rfind(")")
+                    table_options_suffix = create_table_sql[
+                        last_paren:
+                    ]  # e.g. ")ORGANIZATION=heap"
+                    new_sql = create_table_sql[:last_paren]
                     for sparse_vidx in sparse_vidxs:
                         sparse_params = sparse_vidx._parse_kwargs()
                         if "type" in sparse_params:
                             new_sql += f",\n\tVECTOR INDEX {sparse_vidx.index_name}({sparse_vidx.field_name}) with (type={sparse_params['type']}, distance=inner_product)"
                         else:
                             new_sql += f",\n\tVECTOR INDEX {sparse_vidx.index_name}({sparse_vidx.field_name}) with (distance=inner_product)"
-                    new_sql += "\n)"
+                    # Restore table options after the new closing ")"
+                    new_sql += "\n)" + table_options_suffix[1:]
                     conn.execute(text(new_sql))
                 else:
                     table.create(self.engine, checkfirst=True)
