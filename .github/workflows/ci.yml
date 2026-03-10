@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         image_tag: ["4.4.1.0-100000032025101610"]
         init_sql: ["ALTER SYSTEM ob_vector_memory_limit_percentage = 30; SET GLOBAL ob_query_timeout=100000000;"]
         test_filter: ["tests/test_hybrid_search.py::HybridSearchTest"]
@@ -65,3 +65,25 @@ jobs:
       - name: Run tests
         run: |
           make test TEST_FILTER='${{ matrix.test_filter }}'
+
+  test-embedded-seekdb:
+    name: Test embedded SeekDB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Install pyseekdb (optional dependency for embedded SeekDB)
+        run: uv pip install pyseekdb
+
+      - name: Run embedded SeekDB tests
+        run: |
+          uv run python -m pytest tests/test_seekdb_embedded.py -v

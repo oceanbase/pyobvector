@@ -2,7 +2,6 @@
 
 import logging
 import json
-from typing import Optional, Union
 
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy import (
@@ -52,15 +51,15 @@ class MilvusLikeClient(Client):
     def create_collection(
         self,
         collection_name: str,
-        dimension: Optional[int] = None,
+        dimension: int | None = None,
         primary_field_name: str = "id",
-        id_type: Union[DataType, str] = DataType.INT64,
+        id_type: DataType | str = DataType.INT64,
         vector_field_name: str = "vector",
         metric_type: str = "l2",
         auto_id: bool = False,
-        timeout: Optional[float] = None,
-        schema: Optional[CollectionSchema] = None,  # Used for custom setup
-        index_params: Optional[IndexParams] = None,  # Used for custom setup
+        timeout: float | None = None,
+        schema: CollectionSchema | None = None,  # Used for custom setup
+        index_params: IndexParams | None = None,  # Used for custom setup
         max_length: int = 16384,
         **kwargs,
     ):  # pylint: disable=unused-argument
@@ -149,7 +148,7 @@ class MilvusLikeClient(Client):
     def get_collection_stats(
         self,
         collection_name: str,
-        timeout: Optional[float] = None,  # pylint: disable=unused-argument
+        timeout: float | None = None,  # pylint: disable=unused-argument
     ) -> dict:
         """Get collection row count.
 
@@ -171,7 +170,7 @@ class MilvusLikeClient(Client):
     def has_collection(
         self,
         collection_name: str,
-        timeout: Optional[float] = None,  # pylint: disable=unused-argument
+        timeout: float | None = None,  # pylint: disable=unused-argument
     ) -> bool:  # pylint: disable=unused-argument
         """Check if collection exists.
 
@@ -196,7 +195,7 @@ class MilvusLikeClient(Client):
         self,
         old_name: str,
         new_name: str,
-        timeout: Optional[float] = None,  # pylint: disable=unused-argument
+        timeout: float | None = None,  # pylint: disable=unused-argument
     ) -> None:
         """Rename collection.
 
@@ -236,7 +235,7 @@ class MilvusLikeClient(Client):
         self,
         collection_name: str,
         index_params: IndexParams,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         **kwargs,
     ):  # pylint: disable=unused-argument
         """Create vector index with index params.
@@ -269,7 +268,7 @@ class MilvusLikeClient(Client):
         self,
         collection_name: str,
         index_name: str,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         **kwargs,
     ):  # pylint: disable=unused-argument
         """Drop index on specified collection.
@@ -357,15 +356,15 @@ class MilvusLikeClient(Client):
     def search(
         self,
         collection_name: str,
-        data: Union[list, dict],
+        data: list | dict,
         anns_field: str,
         with_dist: bool = False,
         flter=None,
         limit: int = 10,
-        output_fields: Optional[list[str]] = None,
-        search_params: Optional[dict] = None,
-        timeout: Optional[float] = None,  # pylint: disable=unused-argument
-        partition_names: Optional[list[str]] = None,
+        output_fields: list[str] | None = None,
+        search_params: dict | None = None,
+        timeout: float | None = None,  # pylint: disable=unused-argument
+        partition_names: list[str] | None = None,
         **kwargs,  # pylint: disable=unused-argument
     ) -> list[dict]:
         """Perform ann search.
@@ -482,9 +481,9 @@ class MilvusLikeClient(Client):
         self,
         collection_name: str,
         flter=None,
-        output_fields: Optional[list[str]] = None,
-        timeout: Optional[float] = None,  # pylint: disable=unused-argument
-        partition_names: Optional[list[str]] = None,
+        output_fields: list[str] | None = None,
+        timeout: float | None = None,  # pylint: disable=unused-argument
+        partition_names: list[str] | None = None,
         **kwargs,  # pylint: disable=unused-argument
     ) -> list[dict]:
         """Query records.
@@ -549,10 +548,10 @@ class MilvusLikeClient(Client):
     def get(
         self,
         collection_name: str,
-        ids: Union[list, str, int] = None,
-        output_fields: Optional[list[str]] = None,
-        timeout: Optional[float] = None,  # pylint: disable=unused-argument
-        partition_names: Optional[list[str]] = None,
+        ids: list | str | int = None,
+        output_fields: list[str] | None = None,
+        timeout: float | None = None,  # pylint: disable=unused-argument
+        partition_names: list[str] | None = None,
         **kwargs,  # pylint: disable=unused-argument
     ) -> list[dict]:
         """Get records with specified primary field `ids`.
@@ -592,7 +591,7 @@ class MilvusLikeClient(Client):
             )
         if isinstance(ids, list):
             where_in_clause = table.c[pkey_names[0]].in_(ids)
-        elif isinstance(ids, (str, int)):
+        elif isinstance(ids, str | int):
             where_in_clause = table.c[pkey_names[0]].in_([ids])
         else:
             raise TypeError("'ids' is not a list/str/int")
@@ -629,10 +628,10 @@ class MilvusLikeClient(Client):
     def delete(
         self,
         collection_name: str,
-        ids: Optional[Union[list, str, int]] = None,
-        timeout: Optional[float] = None,  # pylint: disable=unused-argument
+        ids: list | str | int | None = None,
+        timeout: float | None = None,  # pylint: disable=unused-argument
         flter=None,
-        partition_name: Optional[str] = "",
+        partition_name: str | None = "",
         **kwargs,  # pylint: disable=unused-argument
     ) -> dict:
         """Delete data in collection.
@@ -667,7 +666,7 @@ class MilvusLikeClient(Client):
                 )
             if isinstance(ids, list):
                 where_in_clause = table.c[pkey_names[0]].in_(ids)
-            elif isinstance(ids, (str, int)):
+            elif isinstance(ids, str | int):
                 where_in_clause = table.c[pkey_names[0]].in_([ids])
             else:
                 raise TypeError("'ids' is not a list/str/int")
@@ -691,9 +690,9 @@ class MilvusLikeClient(Client):
     def insert(
         self,
         collection_name: str,
-        data: Union[dict, list[dict]],
-        timeout: Optional[float] = None,
-        partition_name: Optional[str] = "",
+        data: dict | list[dict],
+        timeout: float | None = None,
+        partition_name: str | None = "",
     ) -> None:  # pylint: disable=unused-argument
         """Insert data into collection.
 
@@ -717,10 +716,10 @@ class MilvusLikeClient(Client):
     def upsert(
         self,
         collection_name: str,
-        data: Union[dict, list[dict]],
-        timeout: Optional[float] = None,  # pylint: disable=unused-argument
-        partition_name: Optional[str] = "",
-    ) -> list[Union[str, int]]:
+        data: dict | list[dict],
+        timeout: float | None = None,  # pylint: disable=unused-argument
+        partition_name: str | None = "",
+    ) -> list[str | int]:
         """Update data in table. If primary key is duplicated, replace it.
 
         Args:

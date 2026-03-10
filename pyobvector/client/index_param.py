@@ -1,7 +1,6 @@
 """A module to specify vector index parameters for MilvusLikeClient"""
 
 from enum import Enum
-from typing import Union
 
 
 class VecIndexType(Enum):
@@ -42,7 +41,7 @@ class IndexParam:
         self,
         index_name: str,
         field_name: str,
-        index_type: Union[VecIndexType, str],
+        index_type: VecIndexType | str,
         **kwargs,
     ):
         self.index_name = index_name

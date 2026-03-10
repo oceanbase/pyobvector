@@ -18,6 +18,12 @@ uv sync
 pip install pyobvector==0.2.24
 ```
 
+- for **embedded SeekDB** support (local SeekDB without server):
+
+```shell
+pip install pyobvector[pyseekdb]
+```
+
 ## Build Doc
 
 You can build document locally with `sphinx`:
@@ -33,10 +39,11 @@ For detailed release notes and changelog, see [RELEASE_NOTES.md](RELEASE_NOTES.m
 
 ## Usage
 
-`pyobvector` supports three modes:
+`pyobvector` supports four modes:
 
 - `Milvus compatible mode`: You can use the `MilvusLikeClient` class to use vector storage in a way similar to the Milvus API
 - `SQLAlchemy hybrid mode`: You can use the vector storage function provided by the `ObVecClient` class and execute the relational database statement with the SQLAlchemy library. In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
+- `Embedded SeekDB mode`: Use `ObVecClient` or `SeekdbRemoteClient` with local embedded SeekDB (no server). Same API as remote: `create_table`, `insert`, `ann_search`, etc. Requires optional dependency: `pip install pyobvector[pyseekdb]`.
 - `Hybrid Search mode`: You can use the `HybridSearch` class to perform hybrid search that combines full-text search and vector similarity search, with Elasticsearch-compatible query syntax.
 
 ### Milvus compatible mode
@@ -263,6 +270,70 @@ engine = create_async_engine(connection_str)
 ```
 
 - For further usage in pure `SQLAlchemy` mode, please refer to [SQLAlchemy](https://www.sqlalchemy.org/)
+
+### Embedded SeekDB mode
+
+Use the same ObClient/ObVecClient API with **embedded SeekDB** (local file, no server). Install the optional dependency:
+
+```shell
+pip install pyobvector[pyseekdb]
+```
+
+- connect with path or with an existing `pyseekdb.Client`:
+
+```python
+from pyobvector import SeekdbRemoteClient, ObVecClient
+from pyobvector.client.ob_client import ObClient
+
+# Option 1: path to SeekDB data directory
+client = SeekdbRemoteClient(path="./seekdb_data", database="test")
+
+# Option 2: use an existing pyseekdb.Client
+import pyseekdb
+pyseekdb_client = pyseekdb.Client(path="./seekdb_data", database="test")
+client = SeekdbRemoteClient(pyseekdb_client=pyseekdb_client)
+
+# Option 3: ObVecClient directly
+client = ObVecClient(path="./seekdb_data", db_name="test")
+
+assert isinstance(client, ObVecClient)
+assert isinstance(client, ObClient)
+```
+
+- create table, insert, and ann search (same API as remote):
+
+```python
+from sqlalchemy import Column, Integer, VARCHAR
+from pyobvector import VECTOR, VectorIndex, l2_distance
+
+client.drop_table_if_exist("vec_table")
+client.create_table(
+    table_name="vec_table",
+    columns=[
+        Column("id", Integer, primary_key=True),
+        Column("title", VARCHAR(255)),
+        Column("vec", VECTOR(3)),
+    ],
+    indexes=[VectorIndex("vec_idx", "vec", params="distance=l2, type=hnsw, lib=vsag")],
+    mysql_organization="heap",
+)
+client.insert("vec_table", data=[
+    {"id": 1, "title": "doc A", "vec": [1.0, 1.0, 1.0]},
+    {"id": 2, "title": "doc B", "vec": [1.0, 2.0, 3.0]},
+])
+res = client.ann_search(
+    "vec_table",
+    vec_data=[1.0, 2.0, 3.0],
+    vec_column_name="vec",
+    distance_func=l2_distance,
+    with_dist=True,
+    topk=5,
+    output_column_names=["id", "title"],
+)
+client.drop_table_if_exist("vec_table")
+```
+
+- See `tests/test_seekdb_embedded.py` for more examples.
 
 ### Hybrid Search Mode
 

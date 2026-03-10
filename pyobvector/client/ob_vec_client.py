@@ -1,7 +1,7 @@
 """OceanBase Vector Store Client."""
 
 import logging
-from typing import Optional, Union
+from typing import Any
 
 import numpy as np
 from sqlalchemy import (
@@ -38,9 +38,21 @@ class ObVecClient(ObClient):
         user: str = "root@test",
         password: str = "",
         db_name: str = "test",
-        **kwargs,
+        path: str | None = None,
+        engine: Any | None = None,
+        pyseekdb_client: Any | None = None,
+        **kwargs: Any,
     ):
-        super().__init__(uri, user, password, db_name, **kwargs)
+        super().__init__(
+            uri=uri,
+            user=user,
+            password=password,
+            db_name=db_name,
+            path=path,
+            engine=engine,
+            pyseekdb_client=pyseekdb_client,
+            **kwargs,
+        )
 
         if self.ob_version < ObVersion.from_db_version_nums(4, 3, 3, 0):
             raise ClusterVersionException(
@@ -49,7 +61,7 @@ class ObVecClient(ObClient):
                 % ("Vector Store", "4.3.3.0"),
             )
 
-    def _get_sparse_vector_index_params(self, vidxs: Optional[IndexParams]):
+    def _get_sparse_vector_index_params(self, vidxs: IndexParams | None):
         if vidxs is None:
             return None
         return [vidx for vidx in vidxs if vidx.is_index_type_sparse_vector()]
@@ -58,10 +70,10 @@ class ObVecClient(ObClient):
         self,
         table_name: str,
         columns: list[Column],
-        indexes: Optional[list[Index]] = None,
-        vidxs: Optional[IndexParams] = None,
-        fts_idxs: Optional[list[FtsIndexParam]] = None,
-        partitions: Optional[ObPartition] = None,
+        indexes: list[Index] | None = None,
+        vidxs: IndexParams | None = None,
+        fts_idxs: list[FtsIndexParam] | None = None,
+        partitions: ObPartition | None = None,
         **kwargs,
     ):
         """Create table with optional index_params.
@@ -149,7 +161,7 @@ class ObVecClient(ObClient):
         is_vec_index: bool,
         index_name: str,
         column_names: list[str],
-        vidx_params: Optional[str] = None,
+        vidx_params: str | None = None,
         **kw,
     ):
         """Create common index or vector index.
@@ -279,18 +291,18 @@ class ObVecClient(ObClient):
     def ann_search(
         self,
         table_name: str,
-        vec_data: Union[list, dict],
+        vec_data: list | dict,
         vec_column_name: str,
         distance_func,
         with_dist: bool = False,
         topk: int = 10,
-        output_column_names: Optional[list[str]] = None,
-        output_columns: Optional[Union[list, tuple]] = None,
-        extra_output_cols: Optional[list] = None,
+        output_column_names: list[str] | None = None,
+        output_columns: list | tuple | None = None,
+        extra_output_cols: list | None = None,
         where_clause=None,
-        partition_names: Optional[list[str]] = None,
-        idx_name_hint: Optional[list[str]] = None,
-        distance_threshold: Optional[float] = None,
+        partition_names: list[str] | None = None,
+        idx_name_hint: list[str] | None = None,
+        distance_threshold: float | None = None,
         **kwargs,
     ):  # pylint: disable=unused-argument
         """Perform ann search.
@@ -321,7 +333,7 @@ class ObVecClient(ObClient):
 
         columns = []
         if output_columns:
-            if isinstance(output_columns, (list, tuple)):
+            if isinstance(output_columns, list | tuple):
                 columns = list(output_columns)
             else:
                 columns = [output_columns]
@@ -407,11 +419,11 @@ class ObVecClient(ObClient):
         distance_func,
         with_dist: bool = False,
         topk: int = 10,
-        output_column_names: Optional[list[str]] = None,
-        extra_output_cols: Optional[list] = None,
+        output_column_names: list[str] | None = None,
+        extra_output_cols: list | None = None,
         where_clause=None,
-        partition_names: Optional[list[str]] = None,
-        str_list: Optional[list[str]] = None,
+        partition_names: list[str] | None = None,
+        str_list: list[str] | None = None,
         **kwargs,
     ):  # pylint: disable=unused-argument
         """Perform post ann search.
@@ -493,7 +505,7 @@ class ObVecClient(ObClient):
         vec_column_name: str,
         distance_func,
         topk: int = 10,
-        output_column_names: Optional[list[str]] = None,
+        output_column_names: list[str] | None = None,
         where_clause=None,
         **kwargs,
     ):  # pylint: disable=unused-argument

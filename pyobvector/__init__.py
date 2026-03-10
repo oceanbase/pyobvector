@@ -64,6 +64,7 @@ from .schema import (
 from .json_table import OceanBase
 
 __all__ = [
+    "SeekdbRemoteClient",
     "ObVecClient",
     "MilvusLikeClient",
     "ObVecJsonTableClient",

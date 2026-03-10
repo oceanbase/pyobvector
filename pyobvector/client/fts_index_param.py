@@ -1,7 +1,6 @@
 """A module to specify fts index parameters"""
 
 from enum import Enum
-from typing import Optional, Union
 
 
 class FtsParser(Enum):
@@ -28,13 +27,13 @@ class FtsIndexParam:
         self,
         index_name: str,
         field_names: list[str],
-        parser_type: Optional[Union[FtsParser, str]] = None,
+        parser_type: FtsParser | str | None = None,
     ):
         self.index_name = index_name
         self.field_names = field_names
         self.parser_type = parser_type
 
-    def param_str(self) -> Optional[str]:
+    def param_str(self) -> str | None:
         """Convert parser type to string format for SQL."""
         if self.parser_type is None:
             return None  # Default Space parser, no need to specify

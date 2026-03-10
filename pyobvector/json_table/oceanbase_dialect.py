@@ -1,4 +1,3 @@
-import typing as t
 from sqlglot import parser, exp, Expression
 from sqlglot.dialects.mysql import MySQL
 from sqlglot.tokens import TokenType
@@ -30,7 +29,7 @@ class OceanBase(MySQL):
             "CHANGE": lambda self: self._parse_change_table_column(),
         }
 
-        def _parse_alter_table_alter(self) -> t.Optional[exp.Expression]:
+        def _parse_alter_table_alter(self) -> exp.Expression | None:
             if self._match_texts(self.ALTER_ALTER_PARSERS):
                 return self.ALTER_ALTER_PARSERS[self._prev.text.upper()](self)
 
@@ -70,7 +69,7 @@ class OceanBase(MySQL):
                 using=self._match(TokenType.USING) and self._parse_assignment(),
             )
 
-        def _parse_drop(self, exists: bool = False) -> t.Union[exp.Drop, exp.Command]:
+        def _parse_drop(self, exists: bool = False) -> exp.Drop | exp.Command:
             temporary = self._match(TokenType.TEMPORARY)
             materialized = self._match_text_seq("MATERIALIZED")
 
@@ -111,7 +110,7 @@ class OceanBase(MySQL):
                 concurrently=concurrently,
             )
 
-        def _parse_change_table_column(self) -> t.Optional[exp.Expression]:
+        def _parse_change_table_column(self) -> exp.Expression | None:
             self._match(TokenType.COLUMN)
             origin_col = self._parse_field(any_token=True)
             column = self._parse_field()

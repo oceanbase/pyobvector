@@ -1,6 +1,5 @@
 """Point: OceanBase GIS data type for SQLAlchemy"""
 
-from typing import Optional
 from sqlalchemy.types import UserDefinedType, String
 
 
@@ -13,7 +12,7 @@ class POINT(UserDefinedType):
     def __init__(
         self,
         # lat_long: Tuple[float, float],
-        srid: Optional[int] = None,
+        srid: int | None = None,
     ):
         """Init Latitude and Longitude."""
         super(UserDefinedType, self).__init__()

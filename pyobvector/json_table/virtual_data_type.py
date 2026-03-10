@@ -1,7 +1,6 @@
 from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_DOWN
 from enum import Enum
-from typing import Optional
 from typing import Annotated
 
 from pydantic import BaseModel, Field, AfterValidator, create_model
@@ -25,16 +24,16 @@ class JsonTableDataType(BaseModel):
 
 class JsonTableBool(JsonTableDataType):
     type: JType = Field(default=JType.J_BOOL)
-    val: Optional[bool]
+    val: bool | None
 
 
 class JsonTableTimestamp(JsonTableDataType):
     type: JType = Field(default=JType.J_TIMESTAMP)
-    val: Optional[datetime]
+    val: datetime | None
 
 
 def check_varchar_len_with_length(length: int):
-    def check_varchar_len(x: Optional[str]):
+    def check_varchar_len(x: str | None):
         if x is None:
             return None
         if len(x) > length:
@@ -54,7 +53,7 @@ class JsonTableVarcharFactory:
             "type": (JType, JType.J_VARCHAR),
             "val": (
                 Annotated[
-                    Optional[str],
+                    str | None,
                     AfterValidator(check_varchar_len_with_length(self.length)),
                 ],
                 ...,
@@ -106,7 +105,7 @@ class JsonTableDecimalFactory:
             "type": (JType, JType.J_DECIMAL),
             "val": (
                 Annotated[
-                    Optional[float],
+                    float | None,
                     AfterValidator(
                         check_and_parse_decimal(self.ndigits, self.decimal_p)
                     ),
@@ -119,7 +118,7 @@ class JsonTableDecimalFactory:
 
 class JsonTableInt(JsonTableDataType):
     type: JType = Field(default=JType.J_INT)
-    val: Optional[int]
+    val: int | None
 
 
 def val2json(val):

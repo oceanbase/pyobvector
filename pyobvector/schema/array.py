@@ -1,7 +1,7 @@
 """ARRAY: An extended data type for SQLAlchemy"""
 
 import json
-from typing import Any, Optional, Union
+from typing import Any
 from collections.abc import Sequence
 
 from sqlalchemy.sql.type_api import TypeEngine
@@ -14,7 +14,7 @@ class ARRAY(UserDefinedType):
     cache_ok = True
     _string = String()
 
-    def __init__(self, item_type: Union[TypeEngine, type]):
+    def __init__(self, item_type: TypeEngine | type):
         """Construct an ARRAY.
 
         Args:
@@ -63,7 +63,7 @@ class ARRAY(UserDefinedType):
 
         item_proc = item_type.dialect_impl(dialect).bind_processor(dialect)
 
-        def process(value: Optional[Union[Sequence[Any] | str]]) -> Optional[str]:
+        def process(value: Sequence[Any] | str | None) -> str | None:
             if value is None:
                 return None
             if isinstance(value, str):
@@ -71,7 +71,7 @@ class ARRAY(UserDefinedType):
                 return value
 
             def convert(val):
-                if isinstance(val, (list, tuple)):
+                if isinstance(val, list | tuple):
                     return [convert(v) for v in val]
                 if item_proc:
                     return item_proc(val)
@@ -90,12 +90,12 @@ class ARRAY(UserDefinedType):
 
         item_proc = item_type.dialect_impl(dialect).result_processor(dialect, coltype)
 
-        def process(value: Optional[str]) -> Optional[list[Any]]:
+        def process(value: str | None) -> list[Any] | None:
             if value is None:
                 return None
 
             def convert(val):
-                if isinstance(val, (list, tuple)):
+                if isinstance(val, list | tuple):
                     return [convert(v) for v in val]
                 if item_proc:
                     return item_proc(val)
@@ -115,7 +115,7 @@ class ARRAY(UserDefinedType):
 
         def process(value: Sequence[Any]) -> str:
             def convert(val):
-                if isinstance(val, (list, tuple)):
+                if isinstance(val, list | tuple):
                     return [convert(v) for v in val]
                 if item_proc:
                     return item_proc(val)

@@ -1,7 +1,6 @@
 import json
 import logging
 import re
-from typing import Optional, Union
 
 from sqlalchemy import (
     Column,
@@ -134,7 +133,7 @@ class ObVecJsonTableClient(ObVecClient):
 
     def __init__(
         self,
-        user_id: Optional[str],
+        user_id: str | None,
         admin_id: str,
         uri: str = "127.0.0.1:2881",
         user: str = "root@test",
@@ -182,8 +181,8 @@ class ObVecJsonTableClient(ObVecClient):
         self,
         sql: str,
         select_with_data_id: bool = False,
-        opt_user_id: Optional[str] = None,
-    ) -> Union[Optional[CursorResult], int]:
+        opt_user_id: str | None = None,
+    ) -> CursorResult | None | int:
         """Perform common SQL that operates on JSON Table."""
         ast = parse_one(sql, dialect="oceanbase")
         if isinstance(ast, exp.Create):
@@ -346,7 +345,7 @@ class ObVecJsonTableClient(ObVecClient):
     def _check_table_exists(self, jtable_name: str) -> bool:
         return jtable_name in self.jmetadata.meta_cache
 
-    def _check_col_exists(self, jtable_name: str, col_name: str) -> Optional[dict]:
+    def _check_col_exists(self, jtable_name: str, col_name: str) -> dict | None:
         if not self._check_table_exists(jtable_name):
             return None
         for col_meta in self.jmetadata.meta_cache[jtable_name]:
@@ -715,7 +714,7 @@ class ObVecJsonTableClient(ObVecClient):
             session.close()
 
     def _handle_jtable_dml_insert(
-        self, ast: Expression, opt_user_id: Optional[str] = None
+        self, ast: Expression, opt_user_id: str | None = None
     ):
         real_user_id = opt_user_id or self.user_id
 
@@ -799,7 +798,7 @@ class ObVecJsonTableClient(ObVecClient):
             return n_new_records
 
     def _handle_jtable_dml_update(
-        self, ast: Expression, opt_user_id: Optional[str] = None
+        self, ast: Expression, opt_user_id: str | None = None
     ):
         real_user_id = opt_user_id or self.user_id
 
@@ -855,7 +854,7 @@ class ObVecJsonTableClient(ObVecClient):
         return res.rowcount
 
     def _handle_jtable_dml_delete(
-        self, ast: Expression, opt_user_id: Optional[str] = None
+        self, ast: Expression, opt_user_id: str | None = None
     ):
         real_user_id = opt_user_id or self.user_id
 
@@ -899,7 +898,7 @@ class ObVecJsonTableClient(ObVecClient):
         self,
         ast: Expression,
         select_with_data_id: bool = False,
-        opt_user_id: Optional[str] = None,
+        opt_user_id: str | None = None,
     ):
         real_user_id = opt_user_id or self.user_id
 

@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Union
+from typing import Any
 from urllib.parse import quote
 
 import sqlalchemy.sql.functions as func_mod
@@ -18,7 +18,6 @@ from sqlalchemy import (
     and_,
 )
 from sqlalchemy.dialects import registry
-from sqlalchemy.exc import NoSuchTableError
 
 from .index_param import IndexParams
 from .partitions import ObPartition
@@ -40,8 +39,35 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+def _get_ob_version_from_engine(engine: Any) -> "ObVersion":
+    """Get ObVersion from engine; supports both OceanBase (OB_VERSION) and SeekDB (VERSION)."""
+    with engine.connect() as conn:
+        with conn.begin():
+            try:
+                res = conn.execute(text("SELECT OB_VERSION() FROM DUAL"))
+                version = [r[0] for r in res][0]
+            except Exception:
+                try:
+                    res = conn.execute(text("SELECT VERSION()"))
+                    version = [r[0] for r in res][0]
+                except Exception:
+                    version = "4.3.3.0"
+    vs = str(version).strip()
+    parts = vs.split(".")
+    if len(parts) >= 4:
+        return ObVersion.from_db_version_string(".".join(parts[:4]))
+    if len(parts) == 3:
+        return ObVersion.from_db_version_string(vs + ".0")
+    return ObVersion.from_db_version_nums(4, 3, 3, 0)
+
+
 class ObClient:
-    """The OceanBase Client"""
+    """
+    OceanBase / SeekDB client. Supports:
+    - Remote: uri + user + password + db_name
+    - Embedded SeekDB: path= or pyseekdb_client= (requires pip install pyobvector[pyseekdb])
+    - External engine: engine=
+    """
 
     def __init__(
         self,
@@ -49,7 +75,10 @@ class ObClient:
         user: str = "root@test",
         password: str = "",
         db_name: str = "test",
-        **kwargs,
+        path: str | None = None,
+        engine: Any | None = None,
+        pyseekdb_client: Any | None = None,
+        **kwargs: Any,
     ):
         registry.register(
             "mysql.oceanbase", "pyobvector.schema.dialect", "OceanBaseDialect"
@@ -64,23 +93,33 @@ class ObClient:
         setattr(func_mod, "st_dwithin", st_dwithin)
         setattr(func_mod, "st_astext", st_astext)
 
-        user = quote(user, safe="")
-        password = quote(password, safe="")
+        engine_kw = {k: v for k, v in kwargs.items() if k != "pyseekdb_client"}
 
-        connection_str = (
-            f"mysql+oceanbase://{user}:{password}@{uri}/{db_name}?charset=utf8mb4"
-        )
-        self.engine = create_engine(connection_str, **kwargs)
+        if engine is not None:
+            self.engine = engine
+        elif pyseekdb_client is not None:
+            from .seekdb_engine import create_engine_from_client
+
+            self.engine = create_engine_from_client(pyseekdb_client, **engine_kw)
+        elif path is not None:
+            from .seekdb_engine import create_embedded_engine
+
+            self.engine = create_embedded_engine(path, database=db_name, **engine_kw)
+        else:
+            user_quoted = quote(user, safe="")
+            password_quoted = quote(password, safe="")
+            connection_str = f"mysql+oceanbase://{user_quoted}:{password_quoted}@{uri}/{db_name}?charset=utf8mb4"
+            self.engine = create_engine(connection_str, **engine_kw)
+
         self.metadata_obj = MetaData()
-        self.metadata_obj.reflect(bind=self.engine)
+        try:
+            self.metadata_obj.reflect(bind=self.engine)
+        except Exception as e:
+            logger.debug("metadata reflect skipped: %s", e)
 
-        with self.engine.connect() as conn:
-            with conn.begin():
-                res = conn.execute(text("SELECT OB_VERSION() FROM DUAL"))
-                version = [r[0] for r in res][0]
-                self.ob_version = ObVersion.from_db_version_string(version)
+        self.ob_version = _get_ob_version_from_engine(self.engine)
 
-    def refresh_metadata(self, tables: Optional[list[str]] = None):
+    def refresh_metadata(self, tables: list[str] | None = None):
         """Reload metadata from the database.
 
         Args:
@@ -132,24 +171,28 @@ class ObClient:
             + sql[first_space_after_from:]
         )
 
-    def check_table_exists(self, table_name: str):
-        """Check if table exists.
-
-        Args:
-            table_name (string): table name
-
-        Returns:
-            bool: True if table exists, False otherwise
-        """
-        inspector = inspect(self.engine)
-        return inspector.has_table(table_name)
+    def check_table_exists(self, table_name: str) -> bool:
+        """Check if table exists. Safe for embedded SeekDB (uses SHOW TABLES when needed)."""
+        try:
+            inspector = inspect(self.engine)
+            return inspector.has_table(table_name)
+        except Exception:
+            try:
+                with self.engine.connect() as conn:
+                    r = conn.execute(
+                        text("SHOW TABLES LIKE :name"),
+                        {"name": table_name},
+                    )
+                    return r.fetchone() is not None
+            except Exception:
+                return False
 
     def create_table(
         self,
         table_name: str,
         columns: list[Column],
-        indexes: Optional[list[Index]] = None,
-        partitions: Optional[ObPartition] = None,
+        indexes: list[Index] | None = None,
+        partitions: ObPartition | None = None,
         **kwargs,
     ):
         """Create a table.
@@ -191,16 +234,13 @@ class ObClient:
         """Create `IndexParams` to hold index configuration."""
         return IndexParams()
 
-    def drop_table_if_exist(self, table_name: str):
-        """Drop table if exists."""
-        try:
-            table = Table(table_name, self.metadata_obj, autoload_with=self.engine)
-        except NoSuchTableError:
-            return
+    def drop_table_if_exist(self, table_name: str) -> None:
+        """Drop table if exists. Safe for embedded SeekDB (avoids autoload on missing table)."""
         with self.engine.connect() as conn:
             with conn.begin():
-                table.drop(self.engine, checkfirst=True)
-                self.metadata_obj.remove(table)
+                conn.execute(text(f"DROP TABLE IF EXISTS `{table_name}`"))
+        if table_name in self.metadata_obj.tables:
+            self.metadata_obj.remove(self.metadata_obj.tables[table_name])
 
     def drop_index(self, table_name: str, index_name: str):
         """drop index on specified table.
@@ -214,8 +254,8 @@ class ObClient:
     def insert(
         self,
         table_name: str,
-        data: Union[dict, list[dict]],
-        partition_name: Optional[str] = "",
+        data: dict | list[dict],
+        partition_name: str | None = "",
     ):
         """Insert data into table.
 
@@ -246,8 +286,8 @@ class ObClient:
     def upsert(
         self,
         table_name: str,
-        data: Union[dict, list[dict]],
-        partition_name: Optional[str] = "",
+        data: dict | list[dict],
+        partition_name: str | None = "",
     ):
         """Update data in table. If primary key is duplicated, replace it.
 
@@ -279,7 +319,7 @@ class ObClient:
         table_name: str,
         values_clause,
         where_clause=None,
-        partition_name: Optional[str] = "",
+        partition_name: str | None = "",
     ):
         """Update data in table.
 
@@ -323,9 +363,9 @@ class ObClient:
     def delete(
         self,
         table_name: str,
-        ids: Optional[Union[list, str, int]] = None,
+        ids: list | str | int | None = None,
         where_clause=None,
-        partition_name: Optional[str] = "",
+        partition_name: str | None = "",
     ):
         """Delete data in table.
 
@@ -343,7 +383,7 @@ class ObClient:
             if len(pkey_names) == 1:
                 if isinstance(ids, list):
                     where_in_clause = table.c[pkey_names[0]].in_(ids)
-                elif isinstance(ids, (str, int)):
+                elif isinstance(ids, str | int):
                     where_in_clause = table.c[pkey_names[0]].in_([ids])
                 else:
                     raise TypeError("'ids' is not a list/str/int")
@@ -369,11 +409,11 @@ class ObClient:
     def get(
         self,
         table_name: str,
-        ids: Optional[Union[list, str, int]] = None,
+        ids: list | str | int | None = None,
         where_clause=None,
-        output_column_name: Optional[list[str]] = None,
-        partition_names: Optional[list[str]] = None,
-        n_limits: Optional[int] = None,
+        output_column_name: list[str] | None = None,
+        partition_names: list[str] | None = None,
+        n_limits: int | None = None,
     ):
         """Get records with specified primary field `ids`.
 
@@ -400,7 +440,7 @@ class ObClient:
         if ids is not None and len(pkey_names) == 1:
             if isinstance(ids, list):
                 where_in_clause = table.c[pkey_names[0]].in_(ids)
-            elif isinstance(ids, (str, int)):
+            elif isinstance(ids, str | int):
                 where_in_clause = table.c[pkey_names[0]].in_([ids])
             else:
                 raise TypeError("'ids' is not a list/str/int")
