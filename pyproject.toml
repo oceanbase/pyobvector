@@ -6,7 +6,7 @@ authors = [{name="shanhaikang.shk",email="shanhaikang.shk@oceanbase.com"}]
 readme = "README.md"
 license = "Apache-2.0"
 keywords = ["oceanbase", "vector store", "obvector"]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 dependencies = [
     "numpy>=1.17.0",
@@ -16,6 +16,10 @@ dependencies = [
     "sqlglot>=26.0.1",
     "pydantic>=2.7.0,<3"
 ]
+
+[project.optional-dependencies]
+# pyseekdb requires Python>=3.11; only install on 3.11+ so uv sync --dev works on 3.10
+pyseekdb = ["pyseekdb>=0.1.0; python_version >= '3.11'"]
 
 [project.urls]
 Homepage = "https://github.com/oceanbase/pyobvector"

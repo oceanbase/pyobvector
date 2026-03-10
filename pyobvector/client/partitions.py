@@ -1,6 +1,5 @@
 """A module to do compilation of OceanBase Parition Clause."""
 
-from typing import Optional, Union
 import logging
 from dataclasses import dataclass
 from .enum import IntEnum
@@ -73,7 +72,7 @@ class RangeListPartInfo:
     """
 
     part_name: str
-    part_upper_bound_expr: Union[list, str, int]
+    part_upper_bound_expr: list | str | int
 
     def get_part_expr_str(self):
         """Parse part_upper_bound_expr to text SQL."""
@@ -93,8 +92,8 @@ class ObRangePartition(ObPartition):
         self,
         is_range_columns: bool,
         range_part_infos: list[RangeListPartInfo],
-        range_expr: Optional[str] = None,
-        col_name_list: Optional[list[str]] = None,
+        range_expr: str | None = None,
+        col_name_list: list[str] | None = None,
     ):
         super().__init__(PartType.RangeColumns if is_range_columns else PartType.Range)
         self.range_part_infos = range_part_infos
@@ -153,8 +152,8 @@ class ObSubRangePartition(ObRangePartition):
         self,
         is_range_columns: bool,
         range_part_infos: list[RangeListPartInfo],
-        range_expr: Optional[str] = None,
-        col_name_list: Optional[list[str]] = None,
+        range_expr: str | None = None,
+        col_name_list: list[str] | None = None,
     ):
         super().__init__(is_range_columns, range_part_infos, range_expr, col_name_list)
         self.is_sub = True
@@ -194,8 +193,8 @@ class ObListPartition(ObPartition):
         self,
         is_list_columns: bool,
         list_part_infos: list[RangeListPartInfo],
-        list_expr: Optional[str] = None,
-        col_name_list: Optional[list[str]] = None,
+        list_expr: str | None = None,
+        col_name_list: list[str] | None = None,
     ):
         super().__init__(PartType.ListColumns if is_list_columns else PartType.List)
         self.list_part_infos = list_part_infos
@@ -253,8 +252,8 @@ class ObSubListPartition(ObListPartition):
         self,
         is_list_columns: bool,
         list_part_infos: list[RangeListPartInfo],
-        list_expr: Optional[str] = None,
-        col_name_list: Optional[list[str]] = None,
+        list_expr: str | None = None,
+        col_name_list: list[str] | None = None,
     ):
         super().__init__(is_list_columns, list_part_infos, list_expr, col_name_list)
         self.is_sub = True
@@ -291,7 +290,7 @@ class ObHashPartition(ObPartition):
         self,
         hash_expr: str,
         hash_part_name_list: list[str] = None,
-        part_count: Optional[int] = None,
+        part_count: int | None = None,
     ):
         super().__init__(PartType.Hash)
         self.hash_expr = hash_expr
@@ -341,7 +340,7 @@ class ObSubHashPartition(ObHashPartition):
         self,
         hash_expr: str,
         hash_part_name_list: list[str] = None,
-        part_count: Optional[int] = None,
+        part_count: int | None = None,
     ):
         super().__init__(hash_expr, hash_part_name_list, part_count)
         self.is_sub = True
@@ -369,7 +368,7 @@ class ObKeyPartition(ObPartition):
         self,
         col_name_list: list[str],
         key_part_name_list: list[str] = None,
-        part_count: Optional[int] = None,
+        part_count: int | None = None,
     ):
         super().__init__(PartType.Key)
         self.col_name_list = col_name_list
@@ -423,7 +422,7 @@ class ObSubKeyPartition(ObKeyPartition):
         self,
         col_name_list: list[str],
         key_part_name_list: list[str] = None,
-        part_count: Optional[int] = None,
+        part_count: int | None = None,
     ):
         super().__init__(col_name_list, key_part_name_list, part_count)
         self.is_sub = True

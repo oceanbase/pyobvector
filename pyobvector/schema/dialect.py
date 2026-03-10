@@ -2,6 +2,7 @@
 
 from sqlalchemy import util
 from sqlalchemy.dialects.mysql import aiomysql, pymysql
+from sqlalchemy.engine import reflection
 
 from .reflection import OceanBaseTableDefinitionParser
 from .vector import VECTOR
@@ -12,7 +13,7 @@ from .geo_srid_point import POINT
 class OceanBaseDialect(pymysql.MySQLDialect_pymysql):
     # not change dialect name, since it is a subclass of pymysql.MySQLDialect_pymysql
     # name = "oceanbase"
-    """Ocenbase dialect."""
+    """OceanBase dialect. Compatible with SeekDB (embedded); has_table treats missing table as False."""
 
     supports_statement_cache = True
 
@@ -21,6 +22,16 @@ class OceanBaseDialect(pymysql.MySQLDialect_pymysql):
         self.ischema_names["VECTOR"] = VECTOR
         self.ischema_names["SPARSEVECTOR"] = SPARSE_VECTOR
         self.ischema_names["point"] = POINT
+
+    @reflection.cache
+    def has_table(self, connection, table_name, schema=None, **kw):
+        """Override so SeekDB RuntimeError for non-existent table is treated as False."""
+        try:
+            return super().has_table(connection, table_name, schema=schema, **kw)
+        except RuntimeError as e:
+            if "doesn't exist" in str(e) or "1146" in str(e):
+                return False
+            raise
 
     @util.memoized_property
     def _tabledef_parser(self):
