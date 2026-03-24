@@ -1,6 +1,13 @@
-from sqlglot import parser, exp, Expression
+import sqlglot as _sqlglot
+
+from sqlglot import parser, exp
+from sqlglot.expressions import Expression
 from sqlglot.dialects.mysql import MySQL
 from sqlglot.tokens import TokenType
+
+# sqlglot 30+ passes a pre-built expression into Parser.expression(); older versions
+# pass the class and kwargs separately.
+_SQLGLOT_GE_30 = int(_sqlglot.__version__.split(".", 1)[0]) >= 30
 
 
 class ChangeColumn(Expression):
@@ -29,6 +36,11 @@ class OceanBase(MySQL):
             "CHANGE": lambda self: self._parse_change_table_column(),
         }
 
+        def _make_expression(self, expr_cls: type, **kwargs):
+            if _SQLGLOT_GE_30:
+                return self.expression(expr_cls(**kwargs))
+            return self.expression(expr_cls, **kwargs)
+
         def _parse_alter_table_alter(self) -> exp.Expression | None:
             if self._match_texts(self.ALTER_ALTER_PARSERS):
                 return self.ALTER_ALTER_PARSERS[self._prev.text.upper()](self)
@@ -37,31 +49,31 @@ class OceanBase(MySQL):
             column = self._parse_field_def()
 
             if self._match_pair(TokenType.DROP, TokenType.DEFAULT):
-                return self.expression(exp.AlterColumn, this=column, drop=True)
+                return self._make_expression(exp.AlterColumn, this=column, drop=True)
             if self._match_pair(TokenType.SET, TokenType.DEFAULT):
-                return self.expression(
+                return self._make_expression(
                     exp.AlterColumn, this=column, default=self._parse_assignment()
                 )
             if self._match(TokenType.COMMENT):
-                return self.expression(
+                return self._make_expression(
                     exp.AlterColumn, this=column, comment=self._parse_string()
                 )
             if self._match_text_seq("DROP", "NOT", "NULL"):
-                return self.expression(
+                return self._make_expression(
                     exp.AlterColumn,
                     this=column,
                     drop=True,
                     allow_null=True,
                 )
             if self._match_text_seq("SET", "NOT", "NULL"):
-                return self.expression(
+                return self._make_expression(
                     exp.AlterColumn,
                     this=column,
                     allow_null=False,
                 )
             self._match_text_seq("SET", "DATA")
             self._match_text_seq("TYPE")
-            return self.expression(
+            return self._make_expression(
                 exp.AlterColumn,
                 this=column,
                 dtype=self._parse_types(),
@@ -95,7 +107,7 @@ class OceanBase(MySQL):
             else:
                 expressions = None
 
-            return self.expression(
+            return self._make_expression(
                 exp.Drop,
                 exists=if_exists,
                 this=this,
@@ -114,7 +126,7 @@ class OceanBase(MySQL):
             self._match(TokenType.COLUMN)
             origin_col = self._parse_field(any_token=True)
             column = self._parse_field()
-            return self.expression(
+            return self._make_expression(
                 ChangeColumn,
                 this=column,
                 origin_col_name=origin_col,
