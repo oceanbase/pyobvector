@@ -15,7 +15,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from sqlglot import parse_one, exp, Expression, to_identifier
+from sqlglot import parse_one, exp, to_identifier
+from sqlglot.expressions import Expression
 
 
 from .ob_vec_client import ObVecClient
