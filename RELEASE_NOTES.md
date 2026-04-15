@@ -2,6 +2,10 @@
 
 This file documents all released versions and their notable changes for the pyobvector project. Changes are grouped by version and categorized as Added (new features), Changed (modifications), Fixed (bug fixes), and Security (security updates).
 
+## [0.2.26](https://github.com/oceanbase/pyobvector/compare/release-v0.2.25...release-v0.2.26) - 2026-04-15
+
+-Fix: Compatible with the latest version of sqlglot
+
 ## [0.2.25](https://github.com/oceanbase/pyobvector/compare/release-v0.2.24...release-v0.2.25) - 2026-03-10
 
 - Fix: preserve table options when adding sparse vector indexes
