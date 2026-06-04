@@ -29,6 +29,55 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+class _MappingsResult:
+    def __init__(self, rows: list, keys: list[str]) -> None:
+        self._data = [dict(zip(keys, row)) for row in rows]
+
+    def fetchall(self) -> list[dict]:
+        return list(self._data)
+
+    def all(self) -> list[dict]:
+        return list(self._data)
+
+    def __iter__(self):
+        return iter(self._data)
+
+
+class _BufferedResult:
+    """Buffers all rows from a CursorResult before the connection closes.
+
+    Returning conn.execute() directly from inside a ``with engine.connect()``
+    block hands the caller a dead cursor once the with-block exits.  This
+    wrapper fetches everything eagerly so the result stays valid.
+    """
+
+    def __init__(self, cursor_result) -> None:
+        self._rows: list = cursor_result.fetchall()
+        self._keys: list[str] = list(cursor_result.keys())
+
+    def fetchall(self) -> list:
+        rows, self._rows = self._rows, []
+        return rows
+
+    def fetchone(self):
+        if not self._rows:
+            return None
+        row, self._rows = self._rows[0], self._rows[1:]
+        return row
+
+    def __iter__(self):
+        return iter(self._rows)
+
+    def all(self) -> list:
+        return self.fetchall()
+
+    def keys(self) -> list[str]:
+        return self._keys
+
+    def mappings(self) -> "_MappingsResult":
+        return _MappingsResult(self._rows, self._keys)
+
+
 class ObVecClient(ObClient):
     """The OceanBase Vector Client"""
 
@@ -408,11 +457,11 @@ class ObVecClient(ObClient):
                     )
 
                 if partition_names is None:
-                    return conn.execute(text(stmt_str))
+                    return _BufferedResult(conn.execute(text(stmt_str)))
                 stmt_str = self._insert_partition_hint_for_query_sql(
                     stmt_str, f"PARTITION({', '.join(partition_names)})"
                 )
-                return conn.execute(text(stmt_str))
+                return _BufferedResult(conn.execute(text(stmt_str)))
 
     def post_ann_search(
         self,
@@ -487,7 +536,7 @@ class ObVecClient(ObClient):
                                 )
                             )
                         )
-                    return conn.execute(stmt)
+                    return _BufferedResult(conn.execute(stmt))
                 stmt_str = str(
                     stmt.compile(
                         dialect=self.engine.dialect,
@@ -499,7 +548,7 @@ class ObVecClient(ObClient):
                 )
                 if str_list is not None:
                     str_list.append(stmt_str)
-                return conn.execute(text(stmt_str))
+                return _BufferedResult(conn.execute(text(stmt_str)))
 
     def precise_search(
         self,
@@ -537,7 +586,7 @@ class ObVecClient(ObClient):
                 stmt = stmt.where(*where_clause)
             with self.engine.connect() as conn:
                 with conn.begin():
-                    return conn.execute(stmt)
+                    return _BufferedResult(conn.execute(stmt))
         else:
             stmt = (
                 select(table)
@@ -548,4 +597,4 @@ class ObVecClient(ObClient):
                 stmt = stmt.where(*where_clause)
             with self.engine.connect() as conn:
                 with conn.begin():
-                    return conn.execute(stmt)
+                    return _BufferedResult(conn.execute(stmt))
