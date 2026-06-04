@@ -163,9 +163,12 @@ class ObClient:
 
         No-op when not using embedded seekdb or seekdb version < 1.3.0.
         """
-        server = getattr(self.engine, "_seekdb_server", None)
+        server = self.engine.get_execution_options().get("seekdb_server")
         if server is not None and hasattr(server, "refresh_index"):
-            server.refresh_index()
+            try:
+                server.refresh_index()
+            except Exception as e:
+                logger.warning("seekdb index refresh failed after insert: %s", e)
 
     def _insert_partition_hint_for_query_sql(self, sql: str, partition_hint: str):
         from_index = sql.find("FROM")

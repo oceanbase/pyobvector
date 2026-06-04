@@ -151,8 +151,7 @@ def create_engine_from_client(pyseekdb_client: Any, **kwargs: Any):
         poolclass=NullPool,
         **kwargs,
     )
-    # Attach server so callers can invoke server.refresh_index() for HNSW flush.
-    engine._seekdb_server = server
+    engine.update_execution_options(seekdb_server=server)
     return engine
 
 
