@@ -144,14 +144,16 @@ class ObVecClient(ObClient):
                         vidx.create(self.engine, checkfirst=True)
                 # create fts indexes
                 if fts_idxs is not None:
-                    for fts_idx in fts_idxs:
+                    for fts_idx_param in fts_idxs:
                         idx_cols = [
-                            table.c[field_name] for field_name in fts_idx.field_names
+                            table.c[field_name]
+                            for field_name in fts_idx_param.field_names
                         ]
                         fts_idx = FtsIndex(
-                            fts_idx.index_name,
-                            fts_idx.param_str(),
+                            fts_idx_param.index_name,
+                            fts_idx_param.param_str(),
                             *idx_cols,
+                            parser_properties=fts_idx_param.parser_properties,
                         )
                         fts_idx.create(self.engine, checkfirst=True)
 
@@ -227,6 +229,7 @@ class ObVecClient(ObClient):
                     fts_idx_param.index_name,
                     fts_idx_param.param_str(),
                     *idx_cols,
+                    parser_properties=fts_idx_param.parser_properties,
                 )
                 fts_idx.create(self.engine, checkfirst=True)
 

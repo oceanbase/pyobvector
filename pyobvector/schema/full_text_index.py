@@ -34,12 +34,36 @@ class ObFtsSchemaGenerator(SchemaGenerator):
 
 
 class FtsIndex(Index):
-    """Fts Index schema."""
+    """Fts Index schema.
+
+    Args:
+        name: Index name.
+        fts_parser: Parser name (e.g. "ngram", "ik", "analyzer").
+        column_names: Columns to index.
+        parser_properties: Content placed inside PARSER_PROPERTIES = (...) in the DDL.
+                           Required when fts_parser is "analyzer"; raises ValueError if omitted.
+    """
 
     __visit_name__ = "fts_index"
 
-    def __init__(self, name, fts_parser: str, *column_names, **kw):
+    def __init__(
+        self,
+        name,
+        fts_parser: str | None,
+        *column_names,
+        parser_properties: str | None = None,
+        **kw,
+    ):
+        if isinstance(fts_parser, str):
+            fts_parser = fts_parser.lower()
+        if fts_parser == "analyzer" and parser_properties is None:
+            raise ValueError(
+                'FtsIndex with fts_parser="analyzer" requires parser_properties '
+                "(OceanBase rejects WITH PARSER analyzer without PARSER_PROPERTIES). "
+                'Example value: analysis = \'{"analyzer": "standard"}\''
+            )
         self.fts_parser = fts_parser
+        self.parser_properties = parser_properties
         super().__init__(name, *column_names, **kw)
 
     def create(self, bind, checkfirst: bool = False) -> None:
@@ -59,6 +83,9 @@ def compile_create_fts_index(element, compiler, **kw):  # pylint: disable=unused
     table_name = index.table.name
     column_list = ", ".join([column.name for column in index.columns])
     fts_parser = index.fts_parser
-    if fts_parser is not None:
-        return f"CREATE FULLTEXT INDEX {index.name} ON {table_name} ({column_list}) WITH PARSER {fts_parser}"
-    return f"CREATE FULLTEXT INDEX {index.name} ON {table_name} ({column_list})"
+    if fts_parser is None:
+        return f"CREATE FULLTEXT INDEX {index.name} ON {table_name} ({column_list})"
+    sql = f"CREATE FULLTEXT INDEX {index.name} ON {table_name} ({column_list}) WITH PARSER {fts_parser}"
+    if index.parser_properties is not None:
+        sql += f" PARSER_PROPERTIES=({index.parser_properties})"
+    return sql

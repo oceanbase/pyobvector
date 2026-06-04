@@ -32,6 +32,7 @@ SeekDB (pip install pyobvector[pyseekdb]). Same API as remote: create_table, ins
 * ObSubKeyPartition     Specify Key subpartition info
 * FtsParser             Text Parser Type for Full Text Search
 * FtsIndexParam         Full Text Search index parameter
+* make_analyzer_properties  Build parser_properties string for built-in analyzer parser
 """
 
 import os
@@ -44,7 +45,7 @@ from .index_param import VecIndexType, IndexParam, IndexParams
 from .schema_type import DataType
 from .collection_schema import FieldSchema, CollectionSchema
 from .partitions import *
-from .fts_index_param import FtsParser, FtsIndexParam
+from .fts_index_param import FtsParser, FtsIndexParam, make_analyzer_properties
 
 
 def _resolve_password(password: str) -> str:
@@ -114,4 +115,5 @@ __all__ = [
     "ObSubKeyPartition",
     "FtsParser",
     "FtsIndexParam",
+    "make_analyzer_properties",
 ]

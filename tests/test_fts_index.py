@@ -1,10 +1,25 @@
 import unittest
-from pyobvector import *
-from sqlalchemy import Column, Integer, text
+from pyobvector import (
+    ObVecClient,
+    FtsIndexParam,
+    FtsParser,
+    MatchAgainst,
+    make_analyzer_properties,
+)
+from pyobvector.schema.full_text_index import (
+    FtsIndex,
+    CreateFtsIndex,
+    compile_create_fts_index,
+)
+from sqlalchemy import Column, Integer, MetaData, Table, text
 from sqlalchemy.dialects.mysql import TEXT
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class _MockCompiler:
+    """Minimal stub passed to compile_create_fts_index (unused by the function)."""
 
 
 class ObFtsIndexTest(unittest.TestCase):
@@ -498,3 +513,126 @@ class ObFtsIndexTest(unittest.TestCase):
         )
 
         self.client.drop_table_if_exist(test_collection_name)
+
+
+class FtsAnalyzerCompilationTest(unittest.TestCase):
+    """Unit tests for ANALYZER parser SQL compilation — no DB connection required."""
+
+    def _build_index(self, parser_properties: str) -> FtsIndex:
+        meta = MetaData()
+        table = Table(
+            "articles",
+            meta,
+            Column("id", Integer, primary_key=True),
+            Column("body", TEXT),
+        )
+        return FtsIndex(
+            "ft_idx_body",
+            "analyzer",
+            table.c["body"],
+            parser_properties=parser_properties,
+        )
+
+    def test_fts_analyzer_param_str(self):
+        param = FtsIndexParam(
+            index_name="ft_idx_body",
+            field_names=["body"],
+            parser_type=FtsParser.ANALYZER,
+            parser_properties='analysis = \'{"analyzer": "standard"}\'',
+        )
+        self.assertEqual(param.param_str(), "analyzer")
+
+    def test_fts_analyzer_with_parser_properties(self):
+        props = 'analysis = \'{"analyzer": "standard"}\''
+        param = FtsIndexParam(
+            index_name="ft_idx_body",
+            field_names=["body"],
+            parser_type=FtsParser.ANALYZER,
+            parser_properties=props,
+        )
+        self.assertEqual(param.parser_properties, props)
+        param_dict = dict(param)
+        self.assertEqual(param_dict["parser_properties"], props)
+
+    def test_fts_analyzer_sql_with_properties(self):
+        props = 'analysis = \'{"analyzer": "standard"}\''
+        idx = self._build_index(props)
+        sql = compile_create_fts_index(CreateFtsIndex(idx), _MockCompiler())
+        self.assertIn("WITH PARSER analyzer", sql)
+        self.assertIn(f"PARSER_PROPERTIES = ({props})", sql)
+
+    def test_fts_analyzer_requires_parser_properties(self):
+        param = FtsIndexParam(
+            index_name="ft_idx_body",
+            field_names=["body"],
+            parser_type=FtsParser.ANALYZER,
+        )
+        with self.assertRaises(ValueError):
+            param.param_str()
+
+    def test_fts_parser_properties_not_tied_to_analyzer_type(self):
+        # parser_properties can be used with any parser type, not only ANALYZER
+        meta = MetaData()
+        table = Table(
+            "articles",
+            meta,
+            Column("id", Integer, primary_key=True),
+            Column("body", TEXT),
+        )
+        idx = FtsIndex(
+            "ft_idx_body",
+            "ngram",
+            table.c["body"],
+            parser_properties="token_size = 2",
+        )
+        sql = compile_create_fts_index(CreateFtsIndex(idx), _MockCompiler())
+        self.assertIn("WITH PARSER ngram", sql)
+        self.assertIn("PARSER_PROPERTIES = (token_size = 2)", sql)
+
+    def test_make_analyzer_properties_default(self):
+        result = make_analyzer_properties()
+        self.assertEqual(result, 'analysis = \'{"analyzer": "standard"}\'')
+
+    def test_make_analyzer_properties_custom(self):
+        result = make_analyzer_properties("ik_smart")
+        self.assertEqual(result, 'analysis = \'{"analyzer": "ik_smart"}\'')
+
+    def test_make_analyzer_properties_integrates_with_fts_index_param(self):
+        param = FtsIndexParam(
+            index_name="ft_idx_body",
+            field_names=["body"],
+            parser_type=FtsParser.ANALYZER,
+            parser_properties=make_analyzer_properties(),
+        )
+        self.assertEqual(param.param_str(), "analyzer")
+        self.assertIn('"analyzer": "standard"', param.parser_properties)
+
+    def test_fts_index_direct_analyzer_requires_parser_properties(self):
+        meta = MetaData()
+        table = Table(
+            "articles",
+            meta,
+            Column("id", Integer, primary_key=True),
+            Column("body", TEXT),
+        )
+        with self.assertRaises(ValueError):
+            FtsIndex("ft_idx_body", "analyzer", table.c["body"])
+
+    def test_fts_index_param_str_string_analyzer_requires_parser_properties(self):
+        param = FtsIndexParam(
+            index_name="ft_idx_body",
+            field_names=["body"],
+            parser_type="analyzer",
+        )
+        with self.assertRaises(ValueError):
+            param.param_str()
+
+    def test_fts_index_param_str_string_analyzer_with_parser_properties(self):
+        props = 'analysis = \'{"analyzer": "standard"}\''
+        param = FtsIndexParam(
+            index_name="ft_idx_body",
+            field_names=["body"],
+            parser_type="analyzer",
+            parser_properties=props,
+        )
+        self.assertEqual(param.param_str(), "analyzer")
