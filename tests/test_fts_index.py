@@ -1,6 +1,16 @@
 import unittest
-from pyobvector import ObVecClient, FtsIndexParam, FtsParser, MatchAgainst, make_analyzer_properties
-from pyobvector.schema.full_text_index import FtsIndex, CreateFtsIndex, compile_create_fts_index
+from pyobvector import (
+    ObVecClient,
+    FtsIndexParam,
+    FtsParser,
+    MatchAgainst,
+    make_analyzer_properties,
+)
+from pyobvector.schema.full_text_index import (
+    FtsIndex,
+    CreateFtsIndex,
+    compile_create_fts_index,
+)
 from sqlalchemy import Column, Integer, MetaData, Table, text
 from sqlalchemy.dialects.mysql import TEXT
 import logging
@@ -517,7 +527,10 @@ class FtsAnalyzerCompilationTest(unittest.TestCase):
             Column("body", TEXT),
         )
         return FtsIndex(
-            "ft_idx_body", "analyzer", table.c["body"], parser_properties=parser_properties
+            "ft_idx_body",
+            "analyzer",
+            table.c["body"],
+            parser_properties=parser_properties,
         )
 
     def test_fts_analyzer_param_str(self):

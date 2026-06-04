@@ -146,7 +146,8 @@ class ObVecClient(ObClient):
                 if fts_idxs is not None:
                     for fts_idx_param in fts_idxs:
                         idx_cols = [
-                            table.c[field_name] for field_name in fts_idx_param.field_names
+                            table.c[field_name]
+                            for field_name in fts_idx_param.field_names
                         ]
                         fts_idx = FtsIndex(
                             fts_idx_param.index_name,

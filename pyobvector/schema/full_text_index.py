@@ -46,7 +46,14 @@ class FtsIndex(Index):
 
     __visit_name__ = "fts_index"
 
-    def __init__(self, name, fts_parser: str, *column_names, parser_properties: str | None = None, **kw):
+    def __init__(
+        self,
+        name,
+        fts_parser: str,
+        *column_names,
+        parser_properties: str | None = None,
+        **kw,
+    ):
         self.fts_parser = fts_parser
         self.parser_properties = parser_properties
         super().__init__(name, *column_names, **kw)
