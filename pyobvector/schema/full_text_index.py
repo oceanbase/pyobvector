@@ -41,7 +41,7 @@ class FtsIndex(Index):
         fts_parser: Parser name (e.g. "ngram", "ik", "analyzer").
         column_names: Columns to index.
         parser_properties: Content placed inside PARSER_PROPERTIES = (...) in the DDL.
-                           Required when fts_parser is "analyzer".
+                           Required when fts_parser is "analyzer"; raises ValueError if omitted.
     """
 
     __visit_name__ = "fts_index"
@@ -54,6 +54,12 @@ class FtsIndex(Index):
         parser_properties: str | None = None,
         **kw,
     ):
+        if fts_parser == "analyzer" and parser_properties is None:
+            raise ValueError(
+                'FtsIndex with fts_parser="analyzer" requires parser_properties '
+                "(OceanBase rejects WITH PARSER analyzer without PARSER_PROPERTIES). "
+                'Example value: analysis = \'{"analyzer": "standard"}\''
+            )
         self.fts_parser = fts_parser
         self.parser_properties = parser_properties
         super().__init__(name, *column_names, **kw)

@@ -47,6 +47,15 @@ class FtsIndexParam:
 
         if isinstance(self.parser_type, str):
             # Custom parser name (e.g., "thai_ftparser")
+            if (
+                self.parser_type.lower() == "analyzer"
+                and self.parser_properties is None
+            ):
+                raise ValueError(
+                    'parser_type "analyzer" requires parser_properties '
+                    "(OceanBase rejects WITH PARSER analyzer without PARSER_PROPERTIES). "
+                    'Example value: analysis = \'{"analyzer": "standard"}\''
+                )
             return self.parser_type.lower()
 
         if isinstance(self.parser_type, FtsParser):

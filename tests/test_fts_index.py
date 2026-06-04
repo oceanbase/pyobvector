@@ -607,9 +607,7 @@ class FtsAnalyzerCompilationTest(unittest.TestCase):
         self.assertEqual(param.param_str(), "analyzer")
         self.assertIn('"analyzer": "standard"', param.parser_properties)
 
-    def test_fts_index_direct_analyzer_without_properties_omits_clause(self):
-        # Direct FtsIndex construction bypasses FtsIndexParam validation.
-        # Python does not raise here; the DB rejects the statement at execution time.
+    def test_fts_index_direct_analyzer_requires_parser_properties(self):
         meta = MetaData()
         table = Table(
             "articles",
@@ -617,7 +615,24 @@ class FtsAnalyzerCompilationTest(unittest.TestCase):
             Column("id", Integer, primary_key=True),
             Column("body", TEXT),
         )
-        idx = FtsIndex("ft_idx_body", "analyzer", table.c["body"])
-        sql = compile_create_fts_index(CreateFtsIndex(idx), _MockCompiler())
-        self.assertIn("WITH PARSER analyzer", sql)
-        self.assertNotIn("PARSER_PROPERTIES", sql)
+        with self.assertRaises(ValueError):
+            FtsIndex("ft_idx_body", "analyzer", table.c["body"])
+
+    def test_fts_index_param_str_string_analyzer_requires_parser_properties(self):
+        param = FtsIndexParam(
+            index_name="ft_idx_body",
+            field_names=["body"],
+            parser_type="analyzer",
+        )
+        with self.assertRaises(ValueError):
+            param.param_str()
+
+    def test_fts_index_param_str_string_analyzer_with_parser_properties(self):
+        props = 'analysis = \'{"analyzer": "standard"}\''
+        param = FtsIndexParam(
+            index_name="ft_idx_body",
+            field_names=["body"],
+            parser_type="analyzer",
+            parser_properties=props,
+        )
+        self.assertEqual(param.param_str(), "analyzer")
