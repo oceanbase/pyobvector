@@ -15,7 +15,7 @@ uv sync
 - install with pip:
 
 ```shell
-pip install pyobvector==0.2.26
+pip install pyobvector==0.2.27
 ```
 
 - for **embedded SeekDB** support (local SeekDB without server):
