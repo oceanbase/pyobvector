@@ -1,6 +1,7 @@
 """OceanBase Vector Store Client."""
 
 import logging
+from collections.abc import Iterator
 from typing import Any
 
 import numpy as np
@@ -39,7 +40,7 @@ class _MappingsResult:
     def all(self) -> list[dict]:
         return list(self._data)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[dict]:
         return iter(self._data)
 
 
@@ -51,24 +52,24 @@ class _BufferedResult:
     wrapper fetches everything eagerly so the result stays valid.
     """
 
-    def __init__(self, cursor_result) -> None:
-        self._rows: list = cursor_result.fetchall()
+    def __init__(self, cursor_result: Any) -> None:
+        self._rows: list[tuple] = cursor_result.fetchall()
         self._keys: list[str] = list(cursor_result.keys())
 
-    def fetchall(self) -> list:
+    def fetchall(self) -> list[tuple]:
         rows, self._rows = self._rows, []
         return rows
 
-    def fetchone(self):
+    def fetchone(self) -> tuple | None:
         if not self._rows:
             return None
         row, self._rows = self._rows[0], self._rows[1:]
         return row
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[tuple]:
         return iter(self._rows)
 
-    def all(self) -> list:
+    def all(self) -> list[tuple]:
         return self.fetchall()
 
     def keys(self) -> list[str]:

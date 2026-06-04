@@ -158,6 +158,15 @@ class ObClient:
             logger.warning(f"Failed to query version: {e}")
         return is_seekdb
 
+    def _flush_seekdb_index(self) -> None:
+        """Flush async HNSW index builds in embedded seekdb after insert.
+
+        No-op when not using embedded seekdb or seekdb version < 1.3.0.
+        """
+        server = getattr(self.engine, "_seekdb_server", None)
+        if server is not None and hasattr(server, "refresh_index"):
+            server.refresh_index()
+
     def _insert_partition_hint_for_query_sql(self, sql: str, partition_hint: str):
         from_index = sql.find("FROM")
         assert from_index != -1
@@ -282,6 +291,7 @@ class ObClient:
                         .with_hint(f"PARTITION({partition_name})")
                         .values(data)
                     )
+        self._flush_seekdb_index()
 
     def upsert(
         self,

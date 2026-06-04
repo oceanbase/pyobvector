@@ -12,6 +12,13 @@ from typing import Any
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
 
+_QUERY_SQL_PREFIXES = ("SELECT", "SHOW", "DESCRIBE", "DESC")
+
+
+def _is_query_sql(sql: str) -> bool:
+    """Return True if sql is a row-returning statement (SELECT/SHOW/DESCRIBE/DESC)."""
+    return sql.strip().upper().startswith(_QUERY_SQL_PREFIXES)
+
 
 def _pyformat_to_format(sql: str, params: Any) -> tuple[str, list[Any]]:
     """Convert SQLAlchemy pyformat (%(name)s) + dict params to %s + list for pyseekdb."""
@@ -50,7 +57,10 @@ class _SeekdbCursor:
     def execute(self, operation: str, parameters: Sequence[Any] | None = None) -> None:
         result = _execute_via_pyseekdb(self._client, operation, parameters or ())
         if not result:
-            self._description = None
+            # For SELECT/SHOW/DESCRIBE: use [] so SQLAlchemy treats this as a
+            # row-returning result with 0 rows, not a non-returning statement.
+            # _NoResultMetaData (from None) would cause ResourceClosedError on fetchall().
+            self._description = [] if _is_query_sql(operation) else None
             self._rows = []
             self.rowcount = 0
             return
@@ -135,12 +145,15 @@ def create_engine_from_client(pyseekdb_client: Any, **kwargs: Any):
     def creator() -> _SeekdbConnection:
         return _SeekdbConnection(server)
 
-    return create_engine(
+    engine = create_engine(
         "mysql+oceanbase://root:@127.0.0.1:2881/" + database,
         creator=creator,
         poolclass=NullPool,
         **kwargs,
     )
+    # Attach server so callers can invoke server.refresh_index() for HNSW flush.
+    engine._seekdb_server = server
+    return engine
 
 
 def create_embedded_engine(path: str, database: str = "test", **kwargs: Any):
