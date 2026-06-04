@@ -21,10 +21,8 @@ class FtsIndexParam:
     Args:
         index_name: Index name
         field_names: List of field names to create full-text index on
-        parser_type: Parser type, can be FtsParser enum or string (for custom parsers)
-                    If None, uses default Space parser
         parser_properties: Content placed inside PARSER_PROPERTIES = (...) in the DDL.
-                           When set, the clause is appended for any parser type.
+                           When set and parser_type is not None, the clause is appended.
                            Required for FtsParser.ANALYZER; optional for others.
     """
 

@@ -49,11 +49,13 @@ class FtsIndex(Index):
     def __init__(
         self,
         name,
-        fts_parser: str,
+        fts_parser: str | None,
         *column_names,
         parser_properties: str | None = None,
         **kw,
     ):
+        if isinstance(fts_parser, str):
+            fts_parser = fts_parser.lower()
         if fts_parser == "analyzer" and parser_properties is None:
             raise ValueError(
                 'FtsIndex with fts_parser="analyzer" requires parser_properties '
@@ -85,5 +87,5 @@ def compile_create_fts_index(element, compiler, **kw):  # pylint: disable=unused
         return f"CREATE FULLTEXT INDEX {index.name} ON {table_name} ({column_list})"
     sql = f"CREATE FULLTEXT INDEX {index.name} ON {table_name} ({column_list}) WITH PARSER {fts_parser}"
     if index.parser_properties is not None:
-        sql += f" PARSER_PROPERTIES = ({index.parser_properties})"
+        sql += f" PARSER_PROPERTIES=({index.parser_properties})"
     return sql
