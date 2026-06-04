@@ -39,22 +39,37 @@ def _skip_if_no_embedded():
     "pyseekdb not installed; run: pip install pyobvector[pyseekdb]",
 )
 class TestSeekdbEmbeddedConnection(unittest.TestCase):
-    """Test ObClient/ObVecClient with embedded SeekDB (path= or pyseekdb_client=)."""
+    """Test ObClient/ObVecClient with embedded SeekDB (path= or pyseekdb_client=).
 
-    def setUp(self) -> None:
+    All tests in this class share a single database directory because
+    pylibseekdb.open() is a process-level singleton — calling it a second time
+    (even at a different path) raises "initialized twice" and is silently ignored.
+    Re-creating the directory per test would leave the native library pointing at
+    a deleted path, causing a segfault on the next vector operation.
+    """
+
+    _tmpdir: str = ""
+    _db_path: str = ""
+
+    @classmethod
+    def setUpClass(cls) -> None:
         _skip_if_no_embedded()
-        self.tmpdir = tempfile.mkdtemp(prefix="pyobvector_seekdb_")
-        self.db_path = str(Path(self.tmpdir) / "seekdb_data")
-        Path(self.db_path).mkdir(parents=True, exist_ok=True)
+        cls._tmpdir = tempfile.mkdtemp(prefix="pyobvector_seekdb_")
+        cls._db_path = str(Path(cls._tmpdir) / "seekdb_data")
+        Path(cls._db_path).mkdir(parents=True, exist_ok=True)
 
-    def tearDown(self) -> None:
+    @classmethod
+    def tearDownClass(cls) -> None:
         import shutil
 
-        if hasattr(self, "tmpdir") and Path(self.tmpdir).exists():
+        if cls._tmpdir and Path(cls._tmpdir).exists():
             try:
-                shutil.rmtree(self.tmpdir, ignore_errors=True)
+                shutil.rmtree(cls._tmpdir, ignore_errors=True)
             except Exception:
                 pass
+
+    def setUp(self) -> None:
+        self.db_path = self.__class__._db_path
 
     def test_seekdb_remote_client_path_returns_ob_vec_client(self):
         from pyobvector import SeekdbRemoteClient, ObVecClient
