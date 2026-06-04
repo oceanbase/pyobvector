@@ -408,11 +408,11 @@ class ObVecClient(ObClient):
                     )
 
                 if partition_names is None:
-                    return conn.execute(text(stmt_str))
+                    return conn.execute(text(stmt_str)).freeze()()
                 stmt_str = self._insert_partition_hint_for_query_sql(
                     stmt_str, f"PARTITION({', '.join(partition_names)})"
                 )
-                return conn.execute(text(stmt_str))
+                return conn.execute(text(stmt_str)).freeze()()
 
     def post_ann_search(
         self,
@@ -487,7 +487,7 @@ class ObVecClient(ObClient):
                                 )
                             )
                         )
-                    return conn.execute(stmt)
+                    return conn.execute(stmt).freeze()()
                 stmt_str = str(
                     stmt.compile(
                         dialect=self.engine.dialect,
@@ -499,7 +499,7 @@ class ObVecClient(ObClient):
                 )
                 if str_list is not None:
                     str_list.append(stmt_str)
-                return conn.execute(text(stmt_str))
+                return conn.execute(text(stmt_str)).freeze()()
 
     def precise_search(
         self,
@@ -537,7 +537,7 @@ class ObVecClient(ObClient):
                 stmt = stmt.where(*where_clause)
             with self.engine.connect() as conn:
                 with conn.begin():
-                    return conn.execute(stmt)
+                    return conn.execute(stmt).freeze()()
         else:
             stmt = (
                 select(table)
@@ -548,4 +548,4 @@ class ObVecClient(ObClient):
                 stmt = stmt.where(*where_clause)
             with self.engine.connect() as conn:
                 with conn.begin():
-                    return conn.execute(stmt)
+                    return conn.execute(stmt).freeze()()

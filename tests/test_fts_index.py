@@ -559,7 +559,7 @@ class FtsAnalyzerCompilationTest(unittest.TestCase):
         idx = self._build_index(props)
         sql = compile_create_fts_index(CreateFtsIndex(idx), _MockCompiler())
         self.assertIn("WITH PARSER analyzer", sql)
-        self.assertIn(f"PARSER_PROPERTIES = ({props})", sql)
+        self.assertIn(f"PARSER_PROPERTIES=({props})", sql)
 
     def test_fts_analyzer_requires_parser_properties(self):
         param = FtsIndexParam(
@@ -587,7 +587,7 @@ class FtsAnalyzerCompilationTest(unittest.TestCase):
         )
         sql = compile_create_fts_index(CreateFtsIndex(idx), _MockCompiler())
         self.assertIn("WITH PARSER ngram", sql)
-        self.assertIn("PARSER_PROPERTIES = (token_size = 2)", sql)
+        self.assertIn("PARSER_PROPERTIES=(token_size = 2)", sql)
 
     def test_make_analyzer_properties_default(self):
         result = make_analyzer_properties()
