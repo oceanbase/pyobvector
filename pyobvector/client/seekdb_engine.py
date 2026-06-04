@@ -84,8 +84,10 @@ class _SeekdbCursor:
         return self._description
 
     def close(self) -> None:
-        self._rows = None
-        self._description = None
+        # Rows are already buffered in memory by execute(); nothing to release here.
+        # Clearing _rows/_description would break callers that fetch results after
+        # SQLAlchemy closes the cursor on exiting the connection context block.
+        pass
 
 
 class _SeekdbConnection:
