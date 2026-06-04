@@ -161,7 +161,8 @@ class ObClient:
     def _flush_seekdb_index(self) -> None:
         """Flush async HNSW index builds in embedded seekdb after insert.
 
-        No-op when not using embedded seekdb or seekdb version < 1.3.0.
+        No-op when not using embedded seekdb or when the server does not expose
+        a ``refresh_index`` method.
         """
         server = self.engine.get_execution_options().get("seekdb_server")
         if server is not None and hasattr(server, "refresh_index"):

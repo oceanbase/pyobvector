@@ -5,6 +5,7 @@ work the same for both remote and embedded SeekDB.
 Requires optional dependency: pip install pyobvector[pyseekdb]
 """
 
+import logging
 import re
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -12,12 +13,36 @@ from typing import Any
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
 
+logger = logging.getLogger(__name__)
+
 _QUERY_SQL_PREFIXES = ("SELECT", "SHOW", "DESCRIBE", "DESC")
 
 
 def _is_query_sql(sql: str) -> bool:
     """Return True if sql is a row-returning statement (SELECT/SHOW/DESCRIBE/DESC)."""
     return sql.strip().upper().startswith(_QUERY_SQL_PREFIXES)
+
+
+def _description_from_select(sql: str) -> list[tuple]:
+    """Extract DBAPI description tuples from SELECT column list using sqlglot.
+
+    Falls back to [] when sqlglot cannot parse the statement (e.g. SHOW/DESCRIBE).
+    """
+    try:
+        import sqlglot
+        import sqlglot.expressions as exp
+
+        parsed = sqlglot.parse_one(sql)
+        if parsed is None or not hasattr(parsed, "selects"):
+            return []
+        cols = []
+        for sel in parsed.selects:
+            name = sel.alias or (sel.name if isinstance(sel, exp.Column) else sel.sql())
+            cols.append(name)
+        return [(c, None, None, None, None, None, None) for c in cols]
+    except Exception as e:
+        logger.debug("_description_from_select could not parse SQL: %s", e)
+        return []
 
 
 def _pyformat_to_format(sql: str, params: Any) -> tuple[str, list[Any]]:
@@ -57,10 +82,10 @@ class _SeekdbCursor:
     def execute(self, operation: str, parameters: Sequence[Any] | None = None) -> None:
         result = _execute_via_pyseekdb(self._client, operation, parameters or ())
         if not result:
-            # For SELECT/SHOW/DESCRIBE: use [] so SQLAlchemy treats this as a
-            # row-returning result with 0 rows, not a non-returning statement.
+            # For SELECT/SHOW/DESCRIBE: populate description so SQLAlchemy treats this
+            # as a row-returning result with 0 rows rather than a non-returning statement.
             # _NoResultMetaData (from None) would cause ResourceClosedError on fetchall().
-            self._description = [] if _is_query_sql(operation) else None
+            self._description = _description_from_select(operation) if _is_query_sql(operation) else None
             self._rows = []
             self.rowcount = 0
             return
