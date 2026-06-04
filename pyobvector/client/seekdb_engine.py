@@ -85,7 +85,11 @@ class _SeekdbCursor:
             # For SELECT/SHOW/DESCRIBE: populate description so SQLAlchemy treats this
             # as a row-returning result with 0 rows rather than a non-returning statement.
             # _NoResultMetaData (from None) would cause ResourceClosedError on fetchall().
-            self._description = _description_from_select(operation) if _is_query_sql(operation) else None
+            self._description = (
+                _description_from_select(operation)
+                if _is_query_sql(operation)
+                else None
+            )
             self._rows = []
             self.rowcount = 0
             return
