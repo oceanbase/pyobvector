@@ -38,6 +38,7 @@ In this mode, you can regard `pyobvector` as an extension of SQLAlchemy.
 * st_astext             GIS function: return a Point in human-readable format
 * FtsParser             Text Parser Type for Full Text Search
 * FtsIndexParam         Full Text Search index parameter
+* make_analyzer_properties  Build parser_properties string for built-in analyzer parser
 * MatchAgainst          Full Text Search clause
 """
 
@@ -104,5 +105,6 @@ __all__ = [
     "OceanBase",
     "FtsParser",
     "FtsIndexParam",
+    "make_analyzer_properties",
     "MatchAgainst",
 ]
