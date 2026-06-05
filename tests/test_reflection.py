@@ -51,3 +51,20 @@ class ObReflectionTest(unittest.TestCase):
         state = dialect._tabledef_parser.parse(ddl, "utf8")
         assert len(state.columns) == 4
         assert len(state.keys) == 3
+
+    def test_analyzer_fulltext_parser_properties_and_fts_index_type(self):
+        dialect = OceanBaseDialect()
+        ddl = """CREATE TABLE `t_fts_analyzer` (
+  `id` bigint NOT NULL,
+  `question_tks` longtext DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  FULLTEXT KEY `fts_idx_question_tks` (`question_tks`) WITH PARSER analyzer PARSER_PROPERTIES = (analysis = '{\\"analyzer\\": \\"standard\\"}') FTS_INDEX_TYPE = PHRASE_MATCH BLOCK_SIZE 16384
+) DEFAULT CHARSET = utf8mb4
+"""
+        state = dialect._tabledef_parser.parse(ddl, "utf8")
+        assert len(state.columns) == 2
+        assert len(state.keys) == 2
+        fts_key = next(k for k in state.keys if k.get("parser") == "analyzer")
+        assert fts_key["name"] == "fts_idx_question_tks"
+        assert "standard" in fts_key["parser_properties"]
+        assert fts_key["fts_index_type"] == "PHRASE_MATCH"
