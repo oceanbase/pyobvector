@@ -2,6 +2,10 @@
 
 This file documents all released versions and their notable changes for the pyobvector project. Changes are grouped by version and categorized as Added (new features), Changed (modifications), Fixed (bug fixes), and Security (security updates).
 
+## [0.2.28](https://github.com/oceanbase/pyobvector/compare/release-v0.2.27...release-v0.2.28) - 2026-06-05
+
+- Fix: parse OceanBase FTS_INDEX_TYPE in SHOW CREATE TABLE reflection
+
 ## [0.2.27](https://github.com/oceanbase/pyobvector/compare/release-v0.2.26...release-v0.2.27) - 2026-06-05
 
 - Feat: support ANALYZER parser with PARSER_PROPERTIES for full-text search
