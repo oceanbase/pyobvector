@@ -399,16 +399,16 @@ client.insert(
             "source_id": "3b767712b57211f09c170242ac130008",
             "enabled": 1,
             "vector": [1, 1, 1],
-            "title": "企业版和社区版的功能差异",
-            "content": "OceanBase 数据库提供企业版和社区版两种形态。",
+            "title": "Differences between enterprise and community editions",
+            "content": "OceanBase database provides both enterprise and community editions.",
         },
         {
             "id": 2,
             "vector": [1, 2, 3],
             "enabled": 1,
             "source_id": "3b791472b57211f09c170242ac130008",
-            "title": "快速体验 OceanBase 社区版",
-            "content": "本文根据使用场景详细介绍如何快速部署 OceanBase 数据库。",
+            "title": "Quick start with OceanBase community edition",
+            "content": "This article introduces how to quickly deploy the OceanBase database in different scenarios.",
         },
         # ... more data
     ]
@@ -426,7 +426,7 @@ query = {
                 "query_string": {
                     "fields": ["title^10", "content"],  # field weights
                     "type": "best_fields",
-                    "query": "oceanbase 数据 迁移",
+                    "query": "oceanbase database migration",
                     "minimum_should_match": "30%",
                     "boost": 1
                 }
@@ -501,3 +501,103 @@ You can also get the actual SQL that will be executed:
 sql = client.get_sql(index=test_table_name, body=body)
 print(sql)  # prints the SQL query
 ```
+
+#### SQL-level Hybrid Search (OceanBase >= 4.6.0)
+
+Since OceanBase 4.6.0, hybrid search can be performed with the SQL-level `HYBRID_SEARCH` table function:
+
+```sql
+SELECT column, expr, ... FROM HYBRID_SEARCH(TABLE table_name, DSL_STRING);
+```
+
+Unlike the `DBMS_HYBRID_SEARCH` package interface (which composes a union SQL internally), the SQL-level syntax builds a logical fusion plan at plan stage, providing better hybrid search performance. `pyobvector` exposes it through `HybridSearch.sql_search`:
+
+```python
+from pyobvector.client.hybrid_search import HybridSearch
+
+client = HybridSearch(uri="127.0.0.1:2881", user="test@test")
+
+rows = client.sql_search(
+    table_name=test_table_name,
+    dsl={
+        # full-text route
+        "query": {"match": {"content": {"query": "oceanbase database", "boost": 0.3}}},
+        # vector route
+        "knn": {
+            "field": "vector",
+            "k": 5,
+            "query_vector": "[1, 2, 3]",
+            "boost": 0.7,
+        },
+        # fusion algorithm
+        "rank": {"rrf": {"rank_constant": 60, "rank_window_size": 10}},
+        "size": 10,
+    },
+)
+# rows is a list of dict, the relevance score of each row is in the `__score` field
+for row in rows:
+    print(row["id"], row["__score"])
+```
+
+**Note**: `sql_search` requires OceanBase version >= 4.6.0.0. The table must be a heap table (`ORGANIZATION = HEAP`, partitioned tables are supported). The `__score` relevance column is always included in the returned rows, even when only a subset of columns is requested via `columns`.
+
+##### DSL Reference
+
+The DSL string is a JSON document whose syntax is mostly compatible with Elasticsearch:
+
+- **Top-level keys**:
+  - `query`: full-text/scalar/json/array query route (scored)
+  - `knn`: vector search route, a single object or an array of objects (multi-path vector search)
+  - `rank`: fusion algorithm, `weighted_sum` (default) or `rrf`
+  - `min_score`: filter results whose final `__score` is below the threshold
+  - `from` / `size`: pagination (`from + size` must be in `[0, 10000]`, default `size` is 10)
+- **Full-text queries** (require full-text index on the searched columns):
+  - `match`: single field, multiple keywords. Supports `operator` (`OR`/`AND`), `minimum_should_match`, `boost`
+  - `match_phrase`: phrase search. Supports `slop`, `boost`
+  - `multi_match`: multiple fields. Supports `fields` (with weights like `title^0.3`), `type` (`best_fields`/`most_fields`), `operator`, `minimum_should_match`, `boost`
+  - `query_string`: like `multi_match`, plus keyword weights (e.g. `"query": "gatsby^0.2 dream"`) and `default_operator`
+- **Scalar queries** (non-scoring, cannot appear in scoring `must`/`should` of `bool`):
+  - `term` / `terms`: exact match(es)
+  - `range`: range conditions with `gt`/`gte`/`lt`/`lte`
+- **JSON queries**: `json_contains`, `json_overlaps`, `json_member_of` (with `candidate` and optional `path`); a dotted field name such as `doc_json.name` in scalar queries works like `json_extract`
+- **Array queries**: `array_contains`, `array_contains_all`, `array_overlaps`
+- **`bool` query**: combine sub-queries with `must` (scored), `should` (scored), `filter` (non-scored), `must_not`, plus `minimum_should_match` and `boost`. At least one positive clause (`must`/`should`/`filter`) is required
+- **`knn` parameters**:
+  - `field` (required): vector column name
+  - `k` (required, `[1, 16384]`): return top-K results
+  - `query_vector` (required): string form like `"[0.1, 0.2, 0.3]"` is recommended
+  - `similarity` (optional, `[0, 1]`): similarity threshold of this route (not supported for inner product)
+  - `boost` (optional): weight of this route in fusion
+  - `filter` (optional): per-route filter conditions, same syntax as `query` (non-scoring)
+  - `search_options` (optional): vector search tuning - `ef_search` (`[1, 1000]`), `refine_k` (`[1.0, 1000.0]`), `filter_mode` (`pre`, `pre-knn`, `pre-brute`, `post`, `post-index-merge`)
+- **`rank` fusion**:
+  - `weighted_sum` (default): sum of per-route scores weighted by outer `boost`, with optional `normalizer: "minmax"` to normalize per-route scores into `[0, 1]` first, and `rank_window_size`
+  - `rrf`: Reciprocal Rank Fusion, score `1 / (rank + rank_constant)` per route (`rank_constant` defaults to 60, `rank_window_size` must be >= `size`); setting per-route `boost` makes it weighted RRF
+
+Each `query`/`knn` route is an independent query: filters are not shared between routes, results are unioned and re-ranked by the fusion algorithm, and `size` rows are returned. Field names in the DSL are case-insensitive.
+
+##### Restrictions
+
+- Only heap tables are supported; partitioned tables are supported
+- Vector search requires a vector index (currently HNSW series only); full-text search requires a full-text index (a multi-column full-text index is not effective for hybrid search)
+- Scalar/JSON/ARRAY filter conditions work with or without indexes (indexes recommended)
+- `WHERE` / `ORDER BY` / `LIMIT` are not allowed at the same level as `HYBRID_SEARCH`. Filter or sort on the result with the `where` / `order_by` arguments of `sql_search` (the query is wrapped in a subquery automatically). **Security**: `where` and `order_by` are interpolated into the generated SQL verbatim, so they must be trusted SQL fragments and must never contain untrusted user input (SQL injection risk); prefer the DSL `filter` clauses for user-provided values:
+
+```python
+rows = client.sql_search(
+    table_name=test_table_name,
+    dsl={
+        "knn": {
+            "field": "vector",
+            "k": 10,
+            "query_vector": "[1, 2, 3]",
+            "filter": [{"range": {"id": {"gte": 5}}}],  # per-route filter
+        }
+    },
+    columns=["id", "title"],
+    where="enabled = 1",  # extra filter on the hybrid search result
+    order_by="id DESC",  # extra sorting on the hybrid search result
+)
+```
+
+- Multi-path vector search does not support sparse vectors; generated columns cannot be used in the DSL

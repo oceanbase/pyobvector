@@ -5,6 +5,7 @@ from sqlalchemy import Column, Integer, VARCHAR
 
 from pyobvector import VECTOR, VectorIndex, FtsIndexParam, FtsParser
 from pyobvector.client.hybrid_search import HybridSearch
+from pyobvector.util import ObVersion
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -13,6 +14,13 @@ logger.setLevel(logging.DEBUG)
 class HybridSearchTest(unittest.TestCase):
     def setUp(self) -> None:
         self.client = HybridSearch()
+
+    def _skip_if_sql_search_not_supported(self):
+        if (
+            self.client.ob_version < ObVersion.from_db_version_nums(4, 6, 0, 0)
+            and not self.client._is_seekdb()
+        ):
+            self.skipTest("HYBRID_SEARCH SQL syntax requires OceanBase >= 4.6.0.0")
 
     def _create_test_table(self, test_table_name: str):
         self.client.create_table(
@@ -53,32 +61,32 @@ class HybridSearchTest(unittest.TestCase):
                     "source_id": "3b767712b57211f09c170242ac130008",
                     "enabled": 1,
                     "vector": [1, 1, 1],
-                    "title": "企业版和社区版的功能差异",
-                    "content": "OceanBase 数据库提供企业版和社区版两种形态。",
+                    "title": "Differences between enterprise and community editions",
+                    "content": "OceanBase database provides both enterprise and community editions.",
                 },
                 {
                     "id": 2,
                     "vector": [1, 2, 3],
                     "enabled": 1,
                     "source_id": "3b791472b57211f09c170242ac130008",
-                    "title": "快速体验 OceanBase 社区版",
-                    "content": "本文根据使用场景详细介绍如何快速部署 OceanBase 数据库，旨在帮助您快速掌握并成功使用 OceanBase 数据库。",
+                    "title": "Quick start with OceanBase community edition",
+                    "content": "This article introduces how to quickly deploy the OceanBase database in different scenarios, helping you get started with the OceanBase database quickly.",
                 },
                 {
                     "id": 3,
                     "source_id": "3b7af31eb57211f09c170242ac130008",
                     "enabled": 1,
                     "vector": [3, 2, 1],
-                    "title": "配置最佳实践",
-                    "content": "为了确保用户在各种业务场景下，能够基于 OceanBase 数据库获得比较好的性能，OceanBase 基于过往大量真实场景的调优经验总结了各类业务场景下一些核心配置项和变量的推荐配置。",
+                    "title": "Configuration best practices",
+                    "content": "To ensure good performance across various business scenarios, OceanBase summarizes recommended settings for core configuration items and variables based on tuning experience from real-world scenarios.",
                 },
                 {
                     "id": 4,
                     "source_id": "3b7cb9ceb57211f09c170242ac130008",
                     "enabled": 1,
                     "vector": [2, 2, 2],
-                    "title": "OceanBase 实时分析能力白皮书",
-                    "content": "重点解读 OceanBase 实时分析能力的 8 大核心特性，以及在 HTAP 混合负载场景、实时数据分析场景，和 PL/SQL 批处理场景的应用实践与案例。",
+                    "title": "OceanBase real-time analytics white paper",
+                    "content": "An in-depth interpretation of the 8 core features of OceanBase real-time analytics, with practices and cases in HTAP hybrid workloads, real-time data analysis, and PL/SQL batch processing.",
                 },
             ],
         )
@@ -91,7 +99,7 @@ class HybridSearchTest(unittest.TestCase):
                         "query_string": {
                             "fields": ["title^10", "content"],
                             "type": "best_fields",
-                            "query": '((数据)^0.5106318299637825 (迁移)^0.2651122588583924 (oceanbase)^0.22425591117782506 ("oceanbase 数据 迁移"~2)^1.5)',
+                            "query": '((database)^0.5106318299637825 (migration)^0.2651122588583924 (oceanbase)^0.22425591117782506 ("oceanbase database migration"~2)^1.5)',
                             "minimum_should_match": "30%",
                             "boost": 1,
                         }
@@ -143,3 +151,104 @@ class HybridSearchTest(unittest.TestCase):
         sql = self.client.get_sql(index=test_table_name, body=body)
         res = self.client.perform_raw_text_sql(sql).fetchall()
         assert len(res) > 0
+
+    def test_sql_search_knn(self):
+        self._skip_if_sql_search_not_supported()
+        test_table_name = "sql_search_knn_test"
+        self._create_test_table(test_table_name)
+
+        res = self.client.sql_search(
+            table_name=test_table_name,
+            dsl={
+                "knn": {
+                    "field": "vector",
+                    "k": 2,
+                    "query_vector": "[1, 2, 3]",
+                }
+            },
+        )
+        assert len(res) == 2
+        assert res[0]["id"] == 2
+        assert "__score" in res[0]
+
+    def test_sql_search_match(self):
+        self._skip_if_sql_search_not_supported()
+        test_table_name = "sql_search_match_test"
+        self._create_test_table(test_table_name)
+
+        res = self.client.sql_search(
+            table_name=test_table_name,
+            dsl={"query": {"match": {"content": "OceanBase database"}}},
+            columns=["id", "title"],
+        )
+        assert len(res) > 0
+        assert set(res[0].keys()) == {"id", "title", "__score"}
+
+    def test_sql_search_hybrid_with_rrf(self):
+        self._skip_if_sql_search_not_supported()
+        test_table_name = "sql_search_hybrid_test"
+        self._create_test_table(test_table_name)
+
+        res = self.client.sql_search(
+            table_name=test_table_name,
+            dsl={
+                "query": {
+                    "match": {"content": {"query": "OceanBase database", "boost": 0.3}}
+                },
+                "knn": {
+                    "field": "vector",
+                    "k": 4,
+                    "query_vector": "[1, 2, 3]",
+                    "boost": 0.7,
+                },
+                "rank": {
+                    "rrf": {
+                        "rank_constant": 60,
+                        "rank_window_size": 10,
+                    }
+                },
+                "size": 10,
+            },
+        )
+        assert len(res) > 0
+        assert "__score" in res[0]
+
+    def test_sql_search_multi_knn(self):
+        self._skip_if_sql_search_not_supported()
+        test_table_name = "sql_search_multi_knn_test"
+        self._create_test_table(test_table_name)
+
+        res = self.client.sql_search(
+            table_name=test_table_name,
+            dsl={
+                "knn": [
+                    {"field": "vector", "k": 2, "query_vector": "[1, 2, 3]"},
+                    {"field": "vector", "k": 2, "query_vector": "[1, 1, 1]"},
+                ]
+            },
+        )
+        assert len(res) > 0
+        assert "__score" in res[0]
+
+    def test_sql_search_with_filter_and_outer_where(self):
+        self._skip_if_sql_search_not_supported()
+        test_table_name = "sql_search_filter_test"
+        self._create_test_table(test_table_name)
+
+        res = self.client.sql_search(
+            table_name=test_table_name,
+            dsl={
+                "knn": {
+                    "field": "vector",
+                    "k": 4,
+                    "query_vector": "[1, 2, 3]",
+                    "filter": [{"range": {"id": {"gte": 2}}}],
+                }
+            },
+            where="enabled = 1",
+            order_by="id DESC",
+        )
+        assert len(res) > 0
+        ids = [row["id"] for row in res]
+        assert all(i >= 2 for i in ids)
+        assert ids == sorted(ids, reverse=True)

@@ -165,8 +165,8 @@ class ObFtsIndexTest(unittest.TestCase):
                 # Insert test data
                 test_data = [
                     {"id": 1, "doc": "OceanBase is a distributed database"},
-                    {"id": 2, "doc": "全文索引测试 Full text search test"},
-                    {"id": 3, "doc": "我喜欢编程 I like coding"},
+                    {"id": 2, "doc": "Full text search index test"},
+                    {"id": 3, "doc": "I like coding and programming"},
                 ]
                 self.client.insert(test_collection_name, data=test_data)
 
@@ -276,10 +276,10 @@ class ObFtsIndexTest(unittest.TestCase):
         test_data = [
             {
                 "id": 1,
-                "title": "OceanBase 数据库",
+                "title": "OceanBase database",
                 "content": "OceanBase is a distributed database",
             },
-            {"id": 2, "title": "全文索引", "content": "Full text search index"},
+            {"id": 2, "title": "Full text search", "content": "Full text search index"},
         ]
         self.client.insert(test_collection_name, data=test_data)
 
@@ -287,7 +287,7 @@ class ObFtsIndexTest(unittest.TestCase):
         res_title = self.client.get(
             test_collection_name,
             ids=None,
-            where_clause=[MatchAgainst("数据库", "title")],
+            where_clause=[MatchAgainst("database", "title")],
             output_column_name=["id", "title"],
             n_limits=10,
         )
@@ -315,9 +315,9 @@ class ObFtsIndexTest(unittest.TestCase):
 
         self.client.drop_table_if_exist(test_collection_name)
 
-    def test_fts_chinese_search(self):
-        """Test Chinese full-text search"""
-        test_collection_name = "fts_chinese_test"
+    def test_fts_ik_parser_search(self):
+        """Test full-text search with the IK parser"""
+        test_collection_name = "fts_ik_parser_test"
         self.client.drop_table_if_exist(test_collection_name)
 
         cols = [
@@ -325,9 +325,9 @@ class ObFtsIndexTest(unittest.TestCase):
             Column("doc", TEXT),
         ]
 
-        # Use IK parser, suitable for Chinese
+        # Use IK parser
         fts_index_param = FtsIndexParam(
-            index_name="fts_idx_chinese",
+            index_name="fts_idx_ik",
             field_names=["doc"],
             parser_type=FtsParser.IK,
         )
@@ -339,27 +339,27 @@ class ObFtsIndexTest(unittest.TestCase):
         )
 
         test_data = [
-            {"id": 1, "doc": "海洋数据库 OceanBase"},
-            {"id": 2, "doc": "全文索引功能测试"},
-            {"id": 3, "doc": "我喜欢使用 OceanBase 数据库"},
-            {"id": 4, "doc": "测试数据 test data"},
+            {"id": 1, "doc": "Ocean database OceanBase"},
+            {"id": 2, "doc": "Full text search feature test"},
+            {"id": 3, "doc": "I like using OceanBase database"},
+            {"id": 4, "doc": "sample test data"},
         ]
         self.client.insert(test_collection_name, data=test_data)
 
-        # Test Chinese search
+        # Test search with the IK parser
         res = self.client.get(
             test_collection_name,
             ids=None,
-            where_clause=[MatchAgainst("数据库", "doc")],
+            where_clause=[MatchAgainst("database", "doc")],
             output_column_name=["id", "doc"],
             n_limits=10,
         )
         rows = res.fetchall()
-        # Verify that Chinese full-text search works by checking at least one result
+        # Verify that full-text search works by checking at least one result
         self.assertGreater(
             len(rows),
             0,
-            "Chinese search should return at least one result for '数据库'",
+            "IK parser search should return at least one result for 'database'",
         )
 
         self.client.drop_table_if_exist(test_collection_name)

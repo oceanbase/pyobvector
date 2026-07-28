@@ -78,7 +78,9 @@ def check_and_parse_decimal(x: int, y: int):
         else:
             integer_part, decimal_part = decimal_str, ""
 
-        integer_count = len(integer_part.lstrip("-"))  # 去掉负号的长度
+        integer_count = len(
+            integer_part.lstrip("-")
+        )  # length without the negative sign
         decimal_count = len(decimal_part)
 
         if integer_count + min(decimal_count, y) > x:
