@@ -28,6 +28,14 @@ pyobvector.client.exceptions module
    :undoc-members:
    :show-inheritance:
 
+pyobvector.client.hybrid\_search module
+---------------------------------------
+
+.. automodule:: pyobvector.client.hybrid_search
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pyobvector.client.index\_param module
 -------------------------------------
 

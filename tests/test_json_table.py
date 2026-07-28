@@ -910,55 +910,69 @@ class ObVecJsonTableTest(unittest.TestCase):
             ],
         )
         self.client.perform_json_table_sql(
-            "INSERT INTO `table_unit_test` (id, field0, field1, field2, field4) VALUES (1, '汽车保养', 1, 1000.00, '4S 店')"
+            "INSERT INTO `table_unit_test` (id, field0, field1, field2, field4) VALUES (1, 'car maintenance', 1, 1000.00, '4S store')"
         )
         self.client.perform_json_table_sql(
-            "INSERT INTO `table_unit_test` (id, field0, field1, field2, field3, field4) VALUES (2, '奶茶', 2, 15.00, CURRENT_TIMESTAMP(), '商场'), (3, '书', 2, 40.00, NOW() - INTERVAL '1' DAY, '商场'), (4, '手机', 2, 6000.00, '2025-03-09', '商场')"
+            "INSERT INTO `table_unit_test` (id, field0, field1, field2, field3, field4) VALUES (2, 'milk tea', 2, 15.00, CURRENT_TIMESTAMP(), 'mall'), (3, 'book', 2, 40.00, NOW() - INTERVAL '1' DAY, 'mall'), (4, 'mobile phone', 2, 6000.00, '2025-03-09', 'mall')"
         )
 
         res = self.client.perform_json_table_sql(
-            "SELECT field0 AS 消费内容, field1 AS 消费类型, field2 AS 消费金额, field4 AS 消费地点 FROM `table_unit_test` LIMIT 2"
+            "SELECT field0 AS consume_item, field1 AS consume_type, field2 AS consume_amount, field4 AS consume_location FROM `table_unit_test` LIMIT 2"
         )
         self.assertEqual(
             get_all_rows(res),
             [
-                ("汽车保养", 1, Decimal("1000.00"), "4S 店"),
-                ("奶茶", 2, Decimal("15.00"), "商场"),
+                ("car maintenance", 1, Decimal("1000.00"), "4S store"),
+                ("milk tea", 2, Decimal("15.00"), "mall"),
             ],
         )
 
         res = self.client.perform_json_table_sql(
-            "SELECT field2 FROM `table_unit_test` WHERE field0 like '%汽车%' AND field4 like '%店%' ORDER BY field2 DESC LIMIT 2"
+            "SELECT field2 FROM `table_unit_test` WHERE field0 like '%car%' AND field4 like '%store%' ORDER BY field2 DESC LIMIT 2"
         )
         self.assertEqual(get_all_rows(res), [(Decimal("1000.00"),)])
 
         res = self.client.perform_json_table_sql(
-            "SELECT field0 AS 消费内容, `table_unit_test`.field1 AS 消费类型, field2 AS 消费金额 FROM `table_unit_test` WHERE DATE(`table_unit_test`.field3)='2025-03-09' ORDER BY 消费金额 DESC LIMIT 2"
+            "SELECT field0 AS consume_item, `table_unit_test`.field1 AS consume_type, field2 AS consume_amount FROM `table_unit_test` WHERE DATE(`table_unit_test`.field3)='2025-03-09' ORDER BY consume_amount DESC LIMIT 2"
         )
         # logger.info(get_all_rows(res))
-        self.assertEqual(get_all_rows(res), [("手机", 2, Decimal("6000.00"))])
+        self.assertEqual(get_all_rows(res), [("mobile phone", 2, Decimal("6000.00"))])
 
         res = self.client.perform_json_table_sql(
-            "SELECT field0, field1, field2, field3 FROM `table_unit_test` WHERE field4 like '%商场%' AND field3 <= CAST('2025-03-10' AS DATE) LIMIT 20"
+            "SELECT field0, field1, field2, field3 FROM `table_unit_test` WHERE field4 like '%mall%' AND field3 <= CAST('2025-03-10' AS DATE) LIMIT 20"
         )
         self.assertEqual(
             get_all_rows(res),
-            [("手机", 2, Decimal("6000.00"), datetime.datetime(2025, 3, 9, 0, 0))],
+            [
+                (
+                    "mobile phone",
+                    2,
+                    Decimal("6000.00"),
+                    datetime.datetime(2025, 3, 9, 0, 0),
+                )
+            ],
         )
 
         self.client.perform_json_table_sql(
-            "UPDATE `table_unit_test` SET field3 = '2025-03-14' WHERE field0 = '汽车保养'"
+            "UPDATE `table_unit_test` SET field3 = '2025-03-14' WHERE field0 = 'car maintenance'"
         )
         res = self.client.perform_json_table_sql(
-            "SELECT field0, field1, field2, field3 FROM `table_unit_test` WHERE DATE(field3) = '2025-03-14' AND field0 = '汽车保养'"
+            "SELECT field0, field1, field2, field3 FROM `table_unit_test` WHERE DATE(field3) = '2025-03-14' AND field0 = 'car maintenance'"
         )
         self.assertEqual(
             get_all_rows(res),
-            [("汽车保养", 1, Decimal("1000.00"), datetime.datetime(2025, 3, 14, 0, 0))],
+            [
+                (
+                    "car maintenance",
+                    1,
+                    Decimal("1000.00"),
+                    datetime.datetime(2025, 3, 14, 0, 0),
+                )
+            ],
         )
 
         self.client.perform_json_table_sql(
-            "UPDATE `table_unit_test` SET field0 = CONCAT(field0, '代办') WHERE DATE(field3) = '2025-03-14'"
+            "UPDATE `table_unit_test` SET field0 = CONCAT(field0, ' agency') WHERE DATE(field3) = '2025-03-14'"
         )
         res = self.client.perform_json_table_sql(
             "SELECT field0, field1, field2, field3 FROM `table_unit_test` WHERE DATE(field3) = '2025-03-14'"
@@ -967,7 +981,7 @@ class ObVecJsonTableTest(unittest.TestCase):
             get_all_rows(res),
             [
                 (
-                    "汽车保养代办",
+                    "car maintenance agency",
                     1,
                     Decimal("1000.00"),
                     datetime.datetime(2025, 3, 14, 0, 0),

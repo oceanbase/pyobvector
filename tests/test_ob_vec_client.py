@@ -13,7 +13,7 @@ class ObVecClientTest(unittest.TestCase):
         self.client = ObVecClient()  # Set your link string.
 
     def test_ann_search(self):
-        test_collection_name = "OB文档_ann_test"
+        test_collection_name = "OB_doc_ann_test"
         self.client.drop_table_if_exist(test_collection_name)
 
         # create partitioned table
