@@ -539,7 +539,7 @@ for row in rows:
     print(row["id"], row["__score"])
 ```
 
-**Note**: `sql_search` requires OceanBase version >= 4.6.0.0. The table must be a heap table (`ORGANIZATION = HEAP`, partitioned tables are supported).
+**Note**: `sql_search` requires OceanBase version >= 4.6.0.0. The table must be a heap table (`ORGANIZATION = HEAP`, partitioned tables are supported). The `__score` relevance column is always included in the returned rows, even when only a subset of columns is requested via `columns`.
 
 ##### DSL Reference
 
@@ -581,7 +581,7 @@ Each `query`/`knn` route is an independent query: filters are not shared between
 - Only heap tables are supported; partitioned tables are supported
 - Vector search requires a vector index (currently HNSW series only); full-text search requires a full-text index (a multi-column full-text index is not effective for hybrid search)
 - Scalar/JSON/ARRAY filter conditions work with or without indexes (indexes recommended)
-- `WHERE` / `ORDER BY` / `LIMIT` are not allowed at the same level as `HYBRID_SEARCH`. Filter or sort on the result with the `where` / `order_by` arguments of `sql_search` (the query is wrapped in a subquery automatically):
+- `WHERE` / `ORDER BY` / `LIMIT` are not allowed at the same level as `HYBRID_SEARCH`. Filter or sort on the result with the `where` / `order_by` arguments of `sql_search` (the query is wrapped in a subquery automatically). **Security**: `where` and `order_by` are interpolated into the generated SQL verbatim, so they must be trusted SQL fragments and must never contain untrusted user input (SQL injection risk); prefer the DSL `filter` clauses for user-provided values:
 
 ```python
 rows = client.sql_search(

@@ -146,13 +146,21 @@ class HybridSearch(Client):
             dsl: The hybrid search DSL, either a dict (serialized to JSON) or a
                 JSON string.
             columns: Plain column names to select. If None, all columns of the
-                table plus the `__score` relevance column are returned.
+                table plus the `__score` relevance column are returned. The
+                `__score` column is always included in the result, even when
+                it is not listed in `columns`.
             where: Extra filter condition applied on the hybrid search result.
                 OceanBase does not allow WHERE/ORDER BY/LIMIT at the same level
                 as `HYBRID_SEARCH`, so the query is wrapped in a subquery
-                automatically when `where` or `order_by` is set.
+                automatically when `where` or `order_by` is set. This fragment
+                is interpolated into the SQL statement verbatim: it must be a
+                trusted SQL fragment and must never contain untrusted user
+                input, otherwise it becomes a SQL injection risk. Prefer the
+                DSL `filter` clauses for user-provided values.
             order_by: Sort expression applied on the hybrid search result, e.g.
-                `id DESC` (wrapped in a subquery automatically).
+                `id DESC` (wrapped in a subquery automatically). Like `where`,
+                this fragment is interpolated verbatim and must be trusted SQL
+                that never contains untrusted user input.
 
         Returns:
             A list of rows (dict). The relevance score of each row is in the
@@ -169,9 +177,16 @@ class HybridSearch(Client):
         else:
             dsl_str = dsl
 
-        col_expr = (
-            "*" if columns is None else ", ".join(_quote_identifier(c) for c in columns)
-        )
+        if columns is None:
+            col_expr = "*"
+        else:
+            # `HYBRID_SEARCH` always produces a `__score` relevance column.
+            # Keep it in the projection so that every returned row carries
+            # its score even when a column subset is requested.
+            selected = [_quote_identifier(c) for c in columns]
+            if all(c.lower() != "__score" for c in columns):
+                selected.append(_quote_identifier("__score"))
+            col_expr = ", ".join(selected)
         hybrid_search_from = (
             f"HYBRID_SEARCH(TABLE {_quote_identifier(table_name)}, :dsl)"
         )
