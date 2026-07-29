@@ -2,6 +2,11 @@
 
 This file documents all released versions and their notable changes for the pyobvector project. Changes are grouped by version and categorized as Added (new features), Changed (modifications), Fixed (bug fixes), and Security (security updates).
 
+## [0.2.29](https://github.com/oceanbase/pyobvector/compare/release-v0.2.28...release-v0.2.29) - 2026-06-05
+
+- Fix: fix: refresh embedded seekdb index after upsert
+- Feat: support HYBRID_SEARCH SQL syntax for OceanBase 4.6.0
+
 ## [0.2.28](https://github.com/oceanbase/pyobvector/compare/release-v0.2.27...release-v0.2.28) - 2026-06-05
 
 - Fix: parse OceanBase FTS_INDEX_TYPE in SHOW CREATE TABLE reflection
